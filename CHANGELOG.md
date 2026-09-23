@@ -1,26 +1,23 @@
 # Formlabs MES — Changelog
 
-What I added and what I fixed, newest first. One entry per day. If a day had more than one release, the version numbers are marked inside the entry.
-
-Three version numbers are missing. 3.16, 3.26 and 3.26.1 only changed the handbook, the operator guide and this file. Nothing in the app changed, so there is nothing to write down for them.
+What I added and what I fixed, newest first. One entry per day, whatever that day's real work actually was — a day with several small releases is one entry now, everything from it folded in under the one number, in the order it happened.
 
 Anything before August 31 is written up from the short notes I made at the time. Some days had two or three releases in them.
 
 ---
 
-## 4.25 — Tuesday, September 22, 2026
-**Update this PC from a phone, with the file already in hand - no connection to the update server or GitHub needed.**
+## 3.26 — Tuesday, September 22, 2026
+### Generating a backup on the portable database failed with "pg_dump was not found", every time.
 
-The update server this runs against lives at home, and I don't always have a way to reach it from the plant - either because I'm not on that network, or because home's connection is down. Every other way to get an update onto this PC needed one of those two things reachable. If neither was, the only option left was carrying a USB stick.
+Reported from work: hitting Generate Backup on the portable install said pg_dump was not found and pointed at checking whether it was installed. It was installed - it ships bundled inside the portable database package itself - the lookup just could not find it.
 
-The Updates screen now has an "Upload a package" card, right under the version this PC is running. Pick a `.zip` - off a phone, off a USB stick plugged into a laptop, wherever the file already is - and it goes through the exact same checks a package from the update server or GitHub already goes through: the same signature verification, the same "is this really a package and not garbage" check. Nothing about the pipeline that actually applies it is different - the same backup-first, verify-it-boots, roll-back-on-failure steps run either way. A bad file is rejected and never touches disk; anything that passes shows what it is - version, what it says about itself, how many files - before asking to actually install it, the same confirmation as anywhere else on that screen.
+The code was asking `pgserver` (the package the portable database runs on) where its own bundled pg_dump lives, using a name - `pgserver.POSTGRES_BIN_PATH` - that reads as the obvious way to ask. That name has never actually been there. It lives inside one of pgserver's own internal files, and that file does not hand it up to the name the rest of the code was asking. Every time this ran, it silently failed to find it and moved on, then found nothing else either, because a portable PC has no separately installed PostgreSQL for it to fall back to.
 
-Built and proved this one the hard way before trusting it: a disposable plant PC, a real signed package built from this exact tree, uploaded over a real HTTP connection to a real running server, actually applied, and the version on disk actually changed. Found and fixed a real bug doing that - rejecting a bad upload was trying to delete the file while it was still open, which Windows won't allow, so a garbage upload crashed instead of just being refused. Fixed before it ever went out.
+It went unnoticed here because this home PC has a real PostgreSQL install with its folder saved in `.env`, so the broken lookup was never actually reached - it succeeded on the very first thing it tried, every time. The portable database at work has none of that, so it was the one place this could actually be seen failing.
 
----
+Fixed by finding pgserver's bundled folder from the package's own location on disk instead of the name that was never really there. Backups on the portable database work again. Checked with the exact failure recreated - PATH, the saved folder, and the "look for a separate install" fallback all turned off at once, the same as a portable PC actually has - and confirmed it finds the real, bundled pg_dump every time.
 
-## 4.24 — Tuesday, September 22, 2026
-**A real workflow, not just a pile of correct screens. Plus a genuine bug the redesign turned up.**
+### A real workflow, not just a pile of correct screens. Plus a genuine bug the redesign turned up.
 
 Prompted by an operator asking a couple of times how to do the audits properly. Went looking for why, and found the actual cause: the same underlying check had three different names depending on which screen showed it. The startup checklist called it "Morning Cleanliness Check." The Audit tab's own dropdown called the exact same thing "Start Of Shift (Cleanliness Check)." The status table called it "Start photo." Nobody could be expected to know those were one fact, and the transfer and end-of-shift checks had nothing prompting them at all - they were just two more options in a dropdown that always defaulted back to the first one, whatever was actually still owed.
 
@@ -32,41 +29,24 @@ Prompted by an operator asking a couple of times how to do the audits properly. 
 
 **Managers get an actual "what to check today" list, not just a menu.** The Manager Cockpit landing screen now opens with three live, reasoned items - startup checklists & audits outstanding, downtime & scrap today, and suggestions & crash reports waiting - each with a line on why it's worth looking at and a click straight into the right screen. This sits above the existing status tiles, which still show the raw numbers; this is the ordered procedure a new manager would otherwise have to be told about by whoever had the job before them.
 
----
+### Update this PC from a phone, with the file already in hand - no connection to the update server or GitHub needed.
 
-## 4.23 — Tuesday, September 22, 2026
-**Generating a backup on the portable database failed with "pg_dump was not found", every time.**
+The update server this runs against lives at home, and I don't always have a way to reach it from the plant - either because I'm not on that network, or because home's connection is down. Every other way to get an update onto this PC needed one of those two things reachable. If neither was, the only option left was carrying a USB stick.
 
-Reported from work: hitting Generate Backup on the portable install said pg_dump was not found and pointed at checking whether it was installed. It was installed - it ships bundled inside the portable database package itself - the lookup just could not find it.
+The Updates screen now has an "Upload a package" card, right under the version this PC is running. Pick a `.zip` - off a phone, off a USB stick plugged into a laptop, wherever the file already is - and it goes through the exact same checks a package from the update server or GitHub already goes through: the same signature verification, the same "is this really a package and not garbage" check. Nothing about the pipeline that actually applies it is different - the same backup-first, verify-it-boots, roll-back-on-failure steps run either way. A bad file is rejected and never touches disk; anything that passes shows what it is - version, what it says about itself, how many files - before asking to actually install it, the same confirmation as anywhere else on that screen.
 
-The code was asking `pgserver` (the package the portable database runs on) where its own bundled pg_dump lives, using a name - `pgserver.POSTGRES_BIN_PATH` - that reads as the obvious way to ask. That name has never actually been there. It lives inside one of pgserver's own internal files, and that file does not hand it up to the name the rest of the code was asking. Every time this ran, it silently failed to find it and moved on, then found nothing else either, because a portable PC has no separately installed PostgreSQL for it to fall back to.
-
-It went unnoticed here because this home PC has a real PostgreSQL install with its folder saved in `.env`, so the broken lookup was never actually reached - it succeeded on the very first thing it tried, every time. The portable database at work has none of that, so it was the one place this could actually be seen failing.
-
-Fixed by finding pgserver's bundled folder from the package's own location on disk instead of the name that was never really there. Backups on the portable database work again. Checked with the exact failure recreated - PATH, the saved folder, and the "look for a separate install" fallback all turned off at once, the same as a portable PC actually has - and confirmed it finds the real, bundled pg_dump every time.
+Built and proved this one the hard way before trusting it: a disposable plant PC, a real signed package built from this exact tree, uploaded over a real HTTP connection to a real running server, actually applied, and the version on disk actually changed. Found and fixed a real bug doing that - rejecting a bad upload was trying to delete the file while it was still open, which Windows won't allow, so a garbage upload crashed instead of just being refused. Fixed before it ever went out.
 
 ---
 
-## 4.22 — Sunday, September 20, 2026
-**The badges are paced for what this floor actually pours.**
+## 3.25 — Sunday, September 20, 2026
+### The changelog reads like I wrote it.
 
-Some pourers do three or four thousand units in a day, so a ladder that started at 100 and ran 250, 500, 1,000, 2,500 handed out five badges before first break and then went quiet. That is backwards.
+Every 4.x entry is rewritten in plain English. Same facts, same detail, none of the long wandering sentences. Short sentences, no dashes holding three clauses together, and it says what changed and why in the words I would use standing at the pump.
 
-The rungs are 1,000, 5,000, 25,000, 50,000, 100,000, 250,000, 500,000, a million, two and a half, five, and ten million. Roughly, at three thousand a day: the first is a day, the second a week, the third a month, the million is a year and a bit, and the top one is a career. Every rung is at least double the one below it, so none of them slide by unnoticed, and a strong single day now earns one badge instead of five.
+The 3.x entries further down are untouched for now.
 
-**Today's ring steps in a size that suits the day too.** It used to tick every 25 units, which on a good afternoon meant a hundred flashes. It steps by 100 under 500, then 250, then 500, and by 1,000 once the day is past five thousand.
-
-## 4.21 — Sunday, September 20, 2026
-**Bigger tank drawings, and this PC will not install a release over itself.**
-
-**The tank drawings on Live Reactors were too small.** I shrank them in 4.16 when the numbers moved next to them, and went too far. They are about twice the size again now, so a tank still reads as a tank from a step back.
-
-**A development PC now refuses to apply a release to itself.** This happened to me while testing 4.20: a development server runs out of the project folder like any other PC, so an Update button pressed in a browser pointed at it reverted this project's own working tree to an older release, and the clean-out that makes a revert a real revert took the dev and tests folders with it, because a release package does not carry either. Nothing was lost - the copy taken aside before the update had all of it - but that is luck, not design.
-
-A PC that builds releases has no business installing them, and it is easy to tell apart: a plant PC has no .git and no dev folder, it only has what a package ships. Applying a release on a checkout like this one is refused now. MES_ALLOW_SELF_UPDATE=1 in .env lifts it, for testing the updater on purpose.
-
-## 4.20 — Sunday, September 20, 2026
-**Going back to an older version actually works now, the updater got a lot harder to break, and the Updates screen got rebuilt.**
+### Going back to an older version actually works now, the updater got a lot harder to break, and the Updates screen got rebuilt.
 
 **"Go back to this" never worked.** I found this testing updates. The button was there, the files went back, and then the older release's own start-up hit a database stamped at a migration it has never heard of. The boot check failed, the whole apply rolled itself forward again, and there was no way to revert anything.
 
@@ -84,83 +64,36 @@ The second thing: writing an older release over a newer one left everything the 
 
 **The Updates screen.** The version this PC is on is now the headline, with one button for the newest release if there is one. Versions are grouped into newer, running now, and older ones you can go back to. The confirmation is in the app rather than a browser popup, and it says exactly what is about to happen, including what going back does to the database. Underneath is what this PC has actually been through, failures included, and how many copies are kept aside to go back to. The update source moved into a section that stays shut until you need it.
 
-## 4.19 — Sunday, September 20, 2026
-**The changelog reads like I wrote it.**
+### Bigger tank drawings, and this PC will not install a release over itself.
 
-Every 4.x entry is rewritten in plain English. Same facts, same detail, none of the long wandering sentences. Short sentences, no dashes holding three clauses together, and it says what changed and why in the words I would use standing at the pump.
+**The tank drawings on Live Reactors were too small.** I shrank them three days ago, in 3.24, when the numbers moved next to them, and went too far. They are about twice the size again now, so a tank still reads as a tank from a step back.
 
-The 3.x entries further down are untouched for now.
+**A development PC now refuses to apply a release to itself.** This happened to me while testing the rollback and versioning work above: a development server runs out of the project folder like any other PC, so an Update button pressed in a browser pointed at it reverted this project's own working tree to an older release, and the clean-out that makes a revert a real revert took the dev and tests folders with it, because a release package does not carry either. Nothing was lost - the copy taken aside before the update had all of it - but that is luck, not design.
 
-## 4.18 — Saturday, September 19, 2026
-**The changelog is in the app now.**
+A PC that builds releases has no business installing them, and it is easy to tell apart: a plant PC has no .git and no dev folder, it only has what a package ships. Applying a release on a checkout like this one is refused now. MES_ALLOW_SELF_UPDATE=1 in .env lifts it, for testing the updater on purpose.
 
-These notes were written for every release and then sat in a file on disk that nobody opens. You can read them in the app now, in two places: Account & Preferences, under "What's new", and IT Admin, under "What changed".
+### The badges are paced for what this floor actually pours.
 
-It reads CHANGELOG.md off the PC you are on, not a copy pasted into the app. That file ships inside every update package with the code it describes, so the notes always match the version that PC is actually running. The entry for that version is marked "on this PC".
+Some pourers do three or four thousand units in a day, so a ladder that started at 100 and ran 250, 500, 1,000, 2,500 handed out five badges before first break and then went quiet. That is backwards.
 
-Anyone signed in can read it. It is the same text that goes out with the release, and an operator who finds a screen different than it was yesterday deserves an answer.
+The rungs are 1,000, 5,000, 25,000, 50,000, 100,000, 250,000, 500,000, a million, two and a half, five, and ten million. Roughly, at three thousand a day: the first is a day, the second a week, the third a month, the million is a year and a bit, and the top one is a career. Every rung is at least double the one below it, so none of them slide by unnoticed, and a strong single day now earns one badge instead of five.
 
----
-
-## 4.17 — Saturday, September 19, 2026
-**The IT Admin console got rebuilt.**
-
-It used to be six long labels in one row of buttons. On anything smaller than a desktop that row scrolled sideways, so half the console was off the screen, and nothing told you what any of the six were for.
-
-Now it is a list down the left side. Each one has a line explaining what it does. The ones that pile up work show a count, so an unresolved crash report or a suggestion nobody answered is visible as soon as you open the page instead of being found by clicking through everything. A waiting update shows a count too.
-
-Across the top are the three things worth knowing before you touch anything:
-
-- What version this PC is on. It turns amber and names the new one when there is an update waiting.
-- When the last backup was taken. Green if it is recent, amber once it is overdue, red if there has never been one. It also says how many backups are being kept.
-- Unpacked WIP, with today's poured and packed numbers under it.
+**Today's ring steps in a size that suits the day too.** It used to tick every 25 units, which on a good afternoon meant a hundred flashes. It steps by 100 under 500, then 250, then 500, and by 1,000 once the day is past five thousand.
 
 ---
 
-## 4.16 — Saturday, September 19, 2026
-**The pouring form, the reactor fleet, the sign-in screen, and every table in the app.**
+## 3.24 — Saturday, September 19, 2026
+### The check weight now measures how accurate each operator is, not whether a pump is drifting.
 
-**The pouring form is three steps now and it looks like three steps.** It always was three. Station and material, the lot check, then the count. But all three were plain headings in one long column, so the screen operators use all day read as one wall of fields with no sense of where you were in it. Each step is its own card now, with a number that turns into a green tick when that step is done.
+Same box on the pouring form, same reading, read a different way. Each operator gets their average bias (consistently heavy costs resin, consistently light is a customer problem), how far a typical reading of theirs lands from target in either direction, how many were inside the tolerance band, and how many readings that is from. Closest to target is listed first, so it reads as a scoreboard and not a list of suspects. Going +8 then -8 no longer averages out to looking perfect. That is what the ± figure is for.
 
-The submit button is stuck to the bottom of the screen. The count gets typed at the top of the last card, and on a phone the button was a scroll away from it. "Same as last hour" is a full-width button instead of a small link above the form.
+**Each person is measured against the pump they were standing at.** A pump that runs 8 g heavy makes everybody on it read 8 g heavy, which says nothing about the person. So there is a "vs pump" figure next to the raw one: the same readings with that pump's own median taken out, meaning heavier or lighter than everyone else on the same equipment. It shows a dash until more than one person has weighed on that pump, because a baseline built from one operator's own readings can only ever say that operator is average. The ranking uses the adjusted figure where there is one.
 
-**Live Reactors is one card per tank instead of three.** A tank used to be split across a drawing, a "remaining" box and a "what's in it" box, so reading one tank meant reading three cards, and reading the row meant reading twelve. Now each tank is one card: name and asset tag, a status pill, the litres left in big text, a fill bar, what is in it, and the time in the tank and QC state as small pills. The litres change colour with the level. Green normally, amber under a quarter full, red under a tenth. A QC failure outlines the whole card in red. The drawing is smaller now, because it is there so you recognise the tank, not so you read the level off it.
+The note underneath compares people with each other, not with the middle, because two operators on one pump sit the same distance either side of the median by definition. It reads like "On the same pumps, Ben fills 6.0 g heavier than Ana." When the gap closes once the pump's own habit is taken out, it says that too, and that difference was the equipment and not the people.
 
-**Every table in the app improved at once.** They all use the same two style settings, so making the header stay put while a long list scrolls and making a row light up under the mouse was one change. It covers Batch History, Lot Verification, Log Management, the drill-down panel, the checklist status screen and the SCADA log.
+The note only names anybody once there are at least five readings each. Two readings 9 g out is a coincidence. Twenty of them is a habit.
 
-**The sign-in screen.** It is the first thing anyone sees each morning on a terminal bolted to a bench, and it was a flat blue rectangle. It has a lit background now, a glass panel, bigger boxes and a bigger button for gloved hands, and the button fills up while it signs you in instead of going quiet.
-
-**The Analytics Hub** is set to the same page width as the cockpit and SCADA, so the manager screens all line up.
-
----
-
-## 4.15 — Saturday, September 19, 2026
-**Live SCADA was bland, so I gave it some shape.**
-
-It had turned into a wall of identical flat boxes. Every number the same size, the same colour, in the same kind of card. Nothing was the headline and nothing looked worth a second glance.
-
-- **The headline is a headline now.** The shift's litres are big, with a live dot when a shift is running, and the ahead or behind number sits in a coloured pill instead of trailing along as more text. Next to it is a small graph of the same rows the log below shows, by hour on a single day and by day over a range. The total tells you how much. The graph tells you whether it came in steadily or in one burst before lunch.
-- **The stat boxes have icons, and colour where the number means something.** Run velocity is green at or above target and amber below it. Yield is green above 98%. Anything that cannot be right or wrong stays plain, because if everything is coloured then the colour says nothing.
-- **The shift trajectory** says how far through the shift you are and how many hours are left, instead of leaving a bare bar to work out.
-- **The leaderboard** is bars with medals. The bar is the comparison, the L/h is the detail. Off shift it takes the whole row instead of sitting alone in a third of it looking broken.
-- **Sections are separated** with a line across the page (pouring, packing, the log), matching the cockpit, and the page has a maximum width so it stops spreading across a wide monitor.
-- **The log** has a header that stays put, counts lined up on the right, and scrap in amber only when there is some.
-
----
-
-## 4.14 — Saturday, September 19, 2026
-**The Manager Cockpit landing screen got rebuilt.**
-
-It was a column of identical thin bars, with explanation text hanging under some of them and not others, which is what made the rows look uneven and the page look unfinished.
-
-Every card is the same shape now. An icon, the name, and one line about what that screen answers. The explanation sits inside the card, so the rows line up. The page has a maximum width, because a menu stretched across a wide monitor puts three words at one end and an arrow at the other. Each section has a line across the page instead of a small label floating above a grid.
-
-**It also tells you something about the plant now.** A landing screen made entirely of buttons says nothing about the shift you just walked into. Across the top is the day so far: poured today, pumps running with how many people are on them, downtime, and checks outstanding. Checks outstanding is amber when something is missing and green when nothing is. Every tile opens the rows behind it, same as every other number in the app. The checks tile goes straight to the screen that names who.
-
----
-
-## 4.13 — Saturday, September 19, 2026
-**Badges that run to a million, and the app moves when something happens.**
+### Badges that run to a million, and the app moves when something happens.
 
 **Career milestones.** The shift ring resets at midnight. That is right for a shift and useless as a record of the work. Under it there is now a lifetime total that never resets, and the badge it is working toward: 100, 250, 500, 1k, 2.5k, 5k, 10k, 25k, 50k, 100k, 250k, 500k, and the million. More can go on top later.
 
@@ -180,23 +113,69 @@ Nobody awards these. A badge is a total that has been passed, counted from the p
 
 All of it runs through one file and respects both switches: the operating system's reduced-motion setting and the app's own "background animations off" option. Nothing waits on an animation. A pour is never held up for a flourish. Counting numbers jump straight to the real figure on a hidden or throttled tab, because a wall display showing an old total is the one thing that cannot happen.
 
+### The Manager Cockpit landing screen got rebuilt.
+
+It was a column of identical thin bars, with explanation text hanging under some of them and not others, which is what made the rows look uneven and the page look unfinished.
+
+Every card is the same shape now. An icon, the name, and one line about what that screen answers. The explanation sits inside the card, so the rows line up. The page has a maximum width, because a menu stretched across a wide monitor puts three words at one end and an arrow at the other. Each section has a line across the page instead of a small label floating above a grid.
+
+**It also tells you something about the plant now.** A landing screen made entirely of buttons says nothing about the shift you just walked into. Across the top is the day so far: poured today, pumps running with how many people are on them, downtime, and checks outstanding. Checks outstanding is amber when something is missing and green when nothing is. Every tile opens the rows behind it, same as every other number in the app. The checks tile goes straight to the screen that names who.
+
+### Live SCADA was bland, so I gave it some shape.
+
+It had turned into a wall of identical flat boxes. Every number the same size, the same colour, in the same kind of card. Nothing was the headline and nothing looked worth a second glance.
+
+- **The headline is a headline now.** The shift's litres are big, with a live dot when a shift is running, and the ahead or behind number sits in a coloured pill instead of trailing along as more text. Next to it is a small graph of the same rows the log below shows, by hour on a single day and by day over a range. The total tells you how much. The graph tells you whether it came in steadily or in one burst before lunch.
+- **The stat boxes have icons, and colour where the number means something.** Run velocity is green at or above target and amber below it. Yield is green above 98%. Anything that cannot be right or wrong stays plain, because if everything is coloured then the colour says nothing.
+- **The shift trajectory** says how far through the shift you are and how many hours are left, instead of leaving a bare bar to work out.
+- **The leaderboard** is bars with medals. The bar is the comparison, the L/h is the detail. Off shift it takes the whole row instead of sitting alone in a third of it looking broken.
+- **Sections are separated** with a line across the page (pouring, packing, the log), matching the cockpit, and the page has a maximum width so it stops spreading across a wide monitor.
+- **The log** has a header that stays put, counts lined up on the right, and scrap in amber only when there is some.
+
+### The pouring form, the reactor fleet, the sign-in screen, and every table in the app.
+
+**The pouring form is three steps now and it looks like three steps.** It always was three. Station and material, the lot check, then the count. But all three were plain headings in one long column, so the screen operators use all day read as one wall of fields with no sense of where you were in it. Each step is its own card now, with a number that turns into a green tick when that step is done.
+
+The submit button is stuck to the bottom of the screen. The count gets typed at the top of the last card, and on a phone the button was a scroll away from it. "Same as last hour" is a full-width button instead of a small link above the form.
+
+**Live Reactors is one card per tank instead of three.** A tank used to be split across a drawing, a "remaining" box and a "what's in it" box, so reading one tank meant reading three cards, and reading the row meant reading twelve. Now each tank is one card: name and asset tag, a status pill, the litres left in big text, a fill bar, what is in it, and the time in the tank and QC state as small pills. The litres change colour with the level. Green normally, amber under a quarter full, red under a tenth. A QC failure outlines the whole card in red. The drawing is smaller now, because it is there so you recognise the tank, not so you read the level off it.
+
+**Every table in the app improved at once.** They all use the same two style settings, so making the header stay put while a long list scrolls and making a row light up under the mouse was one change. It covers Batch History, Lot Verification, Log Management, the drill-down panel, the checklist status screen and the SCADA log.
+
+**The sign-in screen.** It is the first thing anyone sees each morning on a terminal bolted to a bench, and it was a flat blue rectangle. It has a lit background now, a glass panel, bigger boxes and a bigger button for gloved hands, and the button fills up while it signs you in instead of going quiet.
+
+**The Analytics Hub** is set to the same page width as the cockpit and SCADA, so the manager screens all line up.
+
+### The IT Admin console got rebuilt.
+
+It used to be six long labels in one row of buttons. On anything smaller than a desktop that row scrolled sideways, so half the console was off the screen, and nothing told you what any of the six were for.
+
+Now it is a list down the left side. Each one has a line explaining what it does. The ones that pile up work show a count, so an unresolved crash report or a suggestion nobody answered is visible as soon as you open the page instead of being found by clicking through everything. A waiting update shows a count too.
+
+Across the top are the three things worth knowing before you touch anything:
+
+- What version this PC is on. It turns amber and names the new one when there is an update waiting.
+- When the last backup was taken. Green if it is recent, amber once it is overdue, red if there has never been one. It also says how many backups are being kept.
+- Unpacked WIP, with today's poured and packed numbers under it.
+
+### The changelog is in the app now.
+
+These notes were written for every release and then sat in a file on disk that nobody opens. You can read them in the app now, in two places: Account & Preferences, under "What's new", and IT Admin, under "What changed".
+
+It reads CHANGELOG.md off the PC you are on, not a copy pasted into the app. That file ships inside every update package with the code it describes, so the notes always match the version that PC is actually running. The entry for that version is marked "on this PC".
+
+Anyone signed in can read it. It is the same text that goes out with the release, and an operator who finds a screen different than it was yesterday deserves an answer.
+
 ---
 
-## 4.12 — Saturday, September 19, 2026
-**The check weight now measures how accurate each operator is, not whether a pump is drifting.**
+## 3.23 — Friday, September 18, 2026
+### Moving the resin list between PCs, and a reopened startup checklist that behaves like one.
 
-Same box on the pouring form, same reading, read a different way. Each operator gets their average bias (consistently heavy costs resin, consistently light is a customer problem), how far a typical reading of theirs lands from target in either direction, how many were inside the tolerance band, and how many readings that is from. Closest to target is listed first, so it reads as a scoreboard and not a list of suspects. Going +8 then -8 no longer averages out to looking perfect. That is what the ± figure is for.
+**Moving the resin list.** `export_resins.py` writes this PC's resin specs to `resin_export.json`. On the other PC, `Import_Resins.bat` loads it into that PC's database. SKUs already there are skipped, so it is safe to run twice. Run it with the app already open.
 
-**Each person is measured against the pump they were standing at.** A pump that runs 8 g heavy makes everybody on it read 8 g heavy, which says nothing about the person. So there is a "vs pump" figure next to the raw one: the same readings with that pump's own median taken out, meaning heavier or lighter than everyone else on the same equipment. It shows a dash until more than one person has weighed on that pump, because a baseline built from one operator's own readings can only ever say that operator is average. The ranking uses the adjusted figure where there is one.
+**Reopening the startup checklist.** It no longer shows the red "terminal locked" banner for a checklist that is already done. It says so, with a button back to the form. A second cleanliness photo can be logged on a pump that was already checked today, for an operator taking over.
 
-The note underneath compares people with each other, not with the middle, because two operators on one pump sit the same distance either side of the median by definition. It reads like "On the same pumps, Ben fills 6.0 g heavier than Ana." When the gap closes once the pump's own habit is taken out, it says that too, and that difference was the equipment and not the people.
-
-The note only names anybody once there are at least five readings each. Two readings 9 g out is a coincidence. Twenty of them is a habit.
-
----
-
-## 4.11 — Friday, September 18, 2026
-**Click any number and see what it is made of.**
+### Click any number and see what it is made of.
 
 Every lot, run, pump, operator, resin, vessel and total is clickable now. A panel slides in from the right with everything behind it: the totals (units, litres, scrap, downtime), a breakdown by operator, pump, lot, resin, day and shift, every log with its weight and lot-check results, the runs it counts toward, the vessel batches it came out of, the cartridge lot checks, and for a pump or a person or a day, the downtime and photo audits.
 
@@ -208,40 +187,8 @@ A run's panel counts its logs by the same rule the run's own progress counter us
 
 ---
 
-## 4.10 — Friday, September 18, 2026
-**Moving the resin list between PCs, and a reopened startup checklist that behaves like one.**
-
-**Moving the resin list.** `export_resins.py` writes this PC's resin specs to `resin_export.json`. On the other PC, `Import_Resins.bat` loads it into that PC's database. SKUs already there are skipped, so it is safe to run twice. Run it with the app already open.
-
-**Reopening the startup checklist.** It no longer shows the red "terminal locked" banner for a checklist that is already done. It says so, with a button back to the form. A second cleanliness photo can be logged on a pump that was already checked today, for an operator taking over.
-
----
-
-## 4.09 — Thursday, September 17, 2026
-**Fewer keystrokes an hour for operators, a straight answer on who did their checks, and pace figures that stop reading high.**
-
-**The estimated total and the pace were always higher than we expected.** It was arithmetic, not optimism. The plant's shared litres-per-hour figure was being applied to every pump, so two unconfigured pumps each claimed the whole plant's rate and three claimed it three times over. A pump's rate now comes from the first of these that exists: a rate somebody set for it, what that pump has actually been doing in its own logs, or a share of the plant figure split between the pumps that have neither. Each station's estimate says which of the three it used, so a number that looks wrong can be traced instead of argued about.
-
-**A pump knows what kind of pump it is.** Piston diaphragm or electric motor, set when the pump is created and changeable afterwards. Nothing is guessed from the name any more.
-
-**Logging an hour is one button when nothing changed.** "Same as last hour" fills in the pump, resin and cartridge from your own last entry of the day. The count is always typed. That is the one number nobody should ever be handed. The lot is typed too, because a lot that quietly carries over is a lot that ends up on the wrong drum.
-
-**Downtime can be timed while it happens.** Start it when the pump stops, stop it when it runs again, and the minutes land in the box. The timer records the moment it started rather than counting up, so a phone in a pocket for twenty minutes still reports twenty minutes. Nothing is recorded until the log is submitted, and a stop two seconds after a start still counts as one minute rather than quietly buying back pace credit.
-
-**A pour is celebrated against its own pump.** A hundred bottles is a strong hour on an old pump and a slow one on a new one, so the celebration is scaled by what that pump has actually been doing. Its median hour, from its own logs. No configuration and no guessing about a pump nobody has characterised. Beating that pump's best hour on record says so by name. A pump with fewer than five hours behind it is not told its first hour is a record.
-
-**Checklist & Audit Status: who did their checks, and when.** One row per operator and pump worked, with the four things that are supposed to happen: the startup checklist, the start-of-shift photo, a transfer check when somebody moved pumps, and the end-of-shift photo. It records nothing new. Every column is read from rows the floor already produces, which is what makes it a record of what happened rather than a second checklist about the first one.
-
-A dash means that check is not expected on that row. The start-of-shift photo belongs to the pump the shift began on, and the end-of-shift photo to the last pump worked. A column that marks a correctly run shift as incomplete gets ignored by everybody within a week. Operators see their own on the Audit tab. Managers see the floor from the Cockpit. Any past date can be picked, so "did that get done last Tuesday" is a question the screen answers instead of a trip through the log tables.
-
-**The startup checklist can be brought back up.** It carries the pump startup form link, and it used to disappear the moment somebody moved to another pump. A button on the operator form shows it again.
-
-**"Browse pictures" only ever opened the camera.** On a phone it went straight to the camera with no way to pick a photo already taken, which is exactly what you want when the photo was taken ten minutes ago with gloves on. It offers the gallery now.
-
----
-
-## 4.08 — Thursday, September 17, 2026
-**A plant PC can find and apply an update on its own, the bundled database is the standard way to run this, and the update that would not apply on a portable PC now applies.**
+## 3.22 — Thursday, September 17, 2026
+### A plant PC can find and apply an update on its own, the bundled database is the standard way to run this, and the update that would not apply on a portable PC now applies.
 
 **A plant PC finds out about a release by itself.** Until now an update travelled on a USB stick and nothing else. It still can, and that path is unchanged, but a PC with internet access now also checks GitHub Releases for a newer signed package, shows managers a banner when there is one, and installs it from the browser (IT Admin, Updates, or the banner's own button). Nothing about trust changes. It is the same signed zip going through the same `setup/apply_update.py`: checksum, signature, version check, database backup, whole project copied aside, write, prove it boots, put the old version back if it does not. `dev/make_update.py --publish` is what puts a release there. The check is cached for fifteen minutes and shared by every open page, because GitHub allows sixty unauthenticated calls an hour per address and a few manager tabs left open all day would spend the lot and start reporting failures instead of updates.
 
@@ -265,10 +212,56 @@ Fixed in `utils.py`, which now finds the bundled database in `pgdata\` and the `
 
 **A private repo no longer looks empty.** The GitHub check never sent this PC's token, so a repo that had been made private answered 404 and got reported as "no release has been published yet". It sends the token on every call now, and a PC without one is told the repo may be private and what to add.
 
+### Fewer keystrokes an hour for operators, a straight answer on who did their checks, and pace figures that stop reading high.
+
+**The estimated total and the pace were always higher than we expected.** It was arithmetic, not optimism. The plant's shared litres-per-hour figure was being applied to every pump, so two unconfigured pumps each claimed the whole plant's rate and three claimed it three times over. A pump's rate now comes from the first of these that exists: a rate somebody set for it, what that pump has actually been doing in its own logs, or a share of the plant figure split between the pumps that have neither. Each station's estimate says which of the three it used, so a number that looks wrong can be traced instead of argued about.
+
+**A pump knows what kind of pump it is.** Piston diaphragm or electric motor, set when the pump is created and changeable afterwards. Nothing is guessed from the name any more.
+
+**Logging an hour is one button when nothing changed.** "Same as last hour" fills in the pump, resin and cartridge from your own last entry of the day. The count is always typed. That is the one number nobody should ever be handed. The lot is typed too, because a lot that quietly carries over is a lot that ends up on the wrong drum.
+
+**Downtime can be timed while it happens.** Start it when the pump stops, stop it when it runs again, and the minutes land in the box. The timer records the moment it started rather than counting up, so a phone in a pocket for twenty minutes still reports twenty minutes. Nothing is recorded until the log is submitted, and a stop two seconds after a start still counts as one minute rather than quietly buying back pace credit.
+
+**A pour is celebrated against its own pump.** A hundred bottles is a strong hour on an old pump and a slow one on a new one, so the celebration is scaled by what that pump has actually been doing. Its median hour, from its own logs. No configuration and no guessing about a pump nobody has characterised. Beating that pump's best hour on record says so by name. A pump with fewer than five hours behind it is not told its first hour is a record.
+
+**Checklist & Audit Status: who did their checks, and when.** One row per operator and pump worked, with the four things that are supposed to happen: the startup checklist, the start-of-shift photo, a transfer check when somebody moved pumps, and the end-of-shift photo. It records nothing new. Every column is read from rows the floor already produces, which is what makes it a record of what happened rather than a second checklist about the first one.
+
+A dash means that check is not expected on that row. The start-of-shift photo belongs to the pump the shift began on, and the end-of-shift photo to the last pump worked. A column that marks a correctly run shift as incomplete gets ignored by everybody within a week. Operators see their own on the Audit tab. Managers see the floor from the Cockpit. Any past date can be picked, so "did that get done last Tuesday" is a question the screen answers instead of a trip through the log tables.
+
+**The startup checklist can be brought back up.** It carries the pump startup form link, and it used to disappear the moment somebody moved to another pump. A button on the operator form shows it again.
+
+**"Browse pictures" only ever opened the camera.** On a phone it went straight to the camera with no way to pick a photo already taken, which is exactly what you want when the photo was taken ten minutes ago with gloves on. It offers the gallery now.
+
 ---
 
-## 4.07 — Wednesday, September 16, 2026
-**The Device Gateway survives the network between the floor PC and the MES PC, says honestly when nothing is being read, and does Find Devices and Test Connection on the PC the machines are actually cabled to.**
+## 3.21 — Wednesday, September 16, 2026
+### The portable launcher could fail to come back after a crash, every seeded account used a fixed demo password, and the operator screens got a pass of small polish.
+
+**A crash could make the bundled database look permanently broken.** Reported directly: a portable-mode launch crashed and after that it would not start again. Two bugs compounding. First, `pgserver`'s own "wait for postgres to be ready" step gives up after a fixed 10 seconds, which is too short for the WAL recovery a real unclean shutdown needs on this setup. A Windows file-locking retry alone can run 30 seconds. Postgres itself reliably finished starting a few seconds later in the background, but the old code treated that timeout as fatal and crashed outright. Second, the shutdown path was not as deterministic as it sounded. Both fixed, and the launcher now waits the way the database actually behaves.
+
+**Every seeded account, including the admin one, used a fixed published password.** The demo accounts a brand-new database creates (`operator` and `sasha` with PIN 1234, and `manager` with PIN admin123) exist so a fresh install has something to sign in with. A known admin password left in place on a real install is a real credential, not a placeholder. The portable launcher now asks, the moment a truly new database is created, for a real name, username and PIN, and creates that as the admin, retiring `manager` once it exists. Declining keeps `manager` and admin123 as before. The same prompt is available on demand afterwards.
+
+**Small motion, mostly for operators.** A few places that changed instantly now change noticeably. The lot verification panel shakes on a mismatch and pulses on a match. The master log stream's newest row flashes when a fresh entry lands. The "Drawing from Reactor X" tank icon gulps when a pour posts. The Undo button has a countdown ring that drains through its 120 seconds. Switching between Pouring, Downtime, Audit, Notes and Summary slides instead of snapping. The checklist unlock sweep is joined by the newly unlocked screen fading up. Buttons press down on touch, and the phone vibrates once on a normal submit.
+
+### A granted ability like "See the plant dashboard" had no way in from the operator's own screen, the vaporwave and synthwave grid had two real rendering bugs, and 4.03's polish pass never reached the one screen it was meant for.
+
+**Granting an operator a screen like Live SCADA did nothing they could reach.** Reported directly. Abilities were handed out to an operator and their pourer and neither could get to what they had been given. The ability itself was enforced correctly on every API call the whole time. This was purely the frontend. Three places decided who sees the manager-side screens by role alone, with no idea a specific ability could be granted on top of it: the app's root route sent any operator or packer straight to the operator form regardless of what they held, the "← Manager Cockpit" button only checked for manager or admin, and the sidebar inside that shell listed screens by role. All three read abilities now.
+
+**The Vaporwave 1984 and Synthwave Sunrise grid had two real bugs, not just a look somebody did not care for.** Reported as "the vaporwave one looks a little weird" next to the others. Both themes share the same receding grid. The animation moved the pattern 60px per cycle while the grid was drawn in 48px tiles, so it visibly snapped once per loop instead of scrolling. And the original 78-degree tilt over a very short 200px perspective folded the grid almost flat. Both fixed. More visible on Vaporwave's saturated magenta than on Synthwave's softer pink, though both were affected the same.
+
+**The animation pass from 4.03 never reached the operator form.** All of that work landed on individual controls, but the full-page background flourish had only ever been wired into the manager shell. An operator on Vaporwave 1984 or The Matrix saw a plain background on the one screen they look at all shift. It is on both screens now. Neon Cyberpunk was tagged as a glow theme from the start but never actually given a flourish, and has one now.
+
+### The operator-form background from 4.04 was there but effectively invisible on a phone, plus a canvas bug that would have undercut the fix on one theme.
+
+**The flourish added in 4.04 could not be seen past the first few seconds on a phone.** Reported after trying it at work. The animation renders behind the whole page, but the card on top of it is solid, and the Pouring tab grows taller than a phone screen as soon as a station and resin are picked. The card then covers the whole visible area at any scroll position, leaving only the brief "just signed in, nothing picked yet" moment where it shows at all. Fixed by making the card itself slightly see-through with a light blur on any theme that actually has a flourish. Plain themes are untouched, since there is no reason to blur a card over nothing.
+
+**The Matrix's falling-glyph canvas only measured its container once.** Caught while checking the fix above. It sized the canvas to its parent's height a single time when it first loaded and used a window resize listener to catch anything after that. On the operator form the page starts short and grows as the checklist and pour fields appear, and none of that resizes the window, so the canvas stayed at its original short height while the page grew past it. The bottom half of a real pour form had no rain behind it at all. It watches the element itself now.
+
+### The Operations Handbook link in the manager sidebar had no permission check of its own.
+
+Reported right after 4.04's ability-based navigation fix went in. That fix filtered every tab and cockpit card down to what a person's abilities actually cover, but the "Operations handbook (PDF)" link below the nav list was never part of that system. It rendered for anyone who reached the shell at all. The handbook is written for managers, and operators already have their own Operator Guide linked from their own screen. It is behind the same check as everything else now, the same gap the "Launch TV Mode" link had and got fixed for in 4.04.
+
+### The Device Gateway survives the network between the floor PC and the MES PC, says honestly when nothing is being read, and does Find Devices and Test Connection on the PC the machines are actually cabled to.
 
 **A few seconds without the database ended the gateway for good.** I found this by simulating a floor-PC gateway on a flaky network (a fake PLC, a real `run_gateway.py` process, and network links I could unplug or stall) before deploying one on a corporate network. The rescan loop had no error handling at all. The first failed query raised out of it and the process exited with a traceback, and nothing was read from any machine again until someone noticed and restarted it by hand. A 25-second drop between the two PCs was enough. A stalled link did the same thing the moment it cleared.
 
@@ -278,67 +271,8 @@ Verified end to end. Through a pulled database link and a 45-second stall the ga
 
 ---
 
-## 4.06 — Wednesday, September 16, 2026
-**The Operations Handbook link in the manager sidebar had no permission check of its own.**
-
-Reported right after 4.04's ability-based navigation fix went in. That fix filtered every tab and cockpit card down to what a person's abilities actually cover, but the "Operations handbook (PDF)" link below the nav list was never part of that system. It rendered for anyone who reached the shell at all. The handbook is written for managers, and operators already have their own Operator Guide linked from their own screen. It is behind the same check as everything else now, the same gap the "Launch TV Mode" link had and got fixed for in 4.04.
-
----
-
-## 4.05 — Wednesday, September 16, 2026
-**The operator-form background from 4.04 was there but effectively invisible on a phone, plus a canvas bug that would have undercut the fix on one theme.**
-
-**The flourish added in 4.04 could not be seen past the first few seconds on a phone.** Reported after trying it at work. The animation renders behind the whole page, but the card on top of it is solid, and the Pouring tab grows taller than a phone screen as soon as a station and resin are picked. The card then covers the whole visible area at any scroll position, leaving only the brief "just signed in, nothing picked yet" moment where it shows at all. Fixed by making the card itself slightly see-through with a light blur on any theme that actually has a flourish. Plain themes are untouched, since there is no reason to blur a card over nothing.
-
-**The Matrix's falling-glyph canvas only measured its container once.** Caught while checking the fix above. It sized the canvas to its parent's height a single time when it first loaded and used a window resize listener to catch anything after that. On the operator form the page starts short and grows as the checklist and pour fields appear, and none of that resizes the window, so the canvas stayed at its original short height while the page grew past it. The bottom half of a real pour form had no rain behind it at all. It watches the element itself now.
-
----
-
-## 4.04 — Wednesday, September 16, 2026
-**A granted ability like "See the plant dashboard" had no way in from the operator's own screen, the vaporwave and synthwave grid had two real rendering bugs, and 4.03's polish pass never reached the one screen it was meant for.**
-
-**Granting an operator a screen like Live SCADA did nothing they could reach.** Reported directly. Abilities were handed out to an operator and their pourer and neither could get to what they had been given. The ability itself was enforced correctly on every API call the whole time. This was purely the frontend. Three places decided who sees the manager-side screens by role alone, with no idea a specific ability could be granted on top of it: the app's root route sent any operator or packer straight to the operator form regardless of what they held, the "← Manager Cockpit" button only checked for manager or admin, and the sidebar inside that shell listed screens by role. All three read abilities now.
-
-**The Vaporwave 1984 and Synthwave Sunrise grid had two real bugs, not just a look somebody did not care for.** Reported as "the vaporwave one looks a little weird" next to the others. Both themes share the same receding grid. The animation moved the pattern 60px per cycle while the grid was drawn in 48px tiles, so it visibly snapped once per loop instead of scrolling. And the original 78-degree tilt over a very short 200px perspective folded the grid almost flat. Both fixed. More visible on Vaporwave's saturated magenta than on Synthwave's softer pink, though both were affected the same.
-
-**The animation pass from 4.03 never reached the operator form.** All of that work landed on individual controls, but the full-page background flourish had only ever been wired into the manager shell. An operator on Vaporwave 1984 or The Matrix saw a plain background on the one screen they look at all shift. It is on both screens now. Neon Cyberpunk was tagged as a glow theme from the start but never actually given a flourish, and has one now.
-
----
-
-## 4.03 — Wednesday, September 16, 2026
-**The portable launcher could fail to come back after a crash, every seeded account used a fixed demo password, and the operator screens got a pass of small polish.**
-
-**A crash could make the bundled database look permanently broken.** Reported directly: a portable-mode launch crashed and after that it would not start again. Two bugs compounding. First, `pgserver`'s own "wait for postgres to be ready" step gives up after a fixed 10 seconds, which is too short for the WAL recovery a real unclean shutdown needs on this setup. A Windows file-locking retry alone can run 30 seconds. Postgres itself reliably finished starting a few seconds later in the background, but the old code treated that timeout as fatal and crashed outright. Second, the shutdown path was not as deterministic as it sounded. Both fixed, and the launcher now waits the way the database actually behaves.
-
-**Every seeded account, including the admin one, used a fixed published password.** The demo accounts a brand-new database creates (`operator` and `sasha` with PIN 1234, and `manager` with PIN admin123) exist so a fresh install has something to sign in with. A known admin password left in place on a real install is a real credential, not a placeholder. The portable launcher now asks, the moment a truly new database is created, for a real name, username and PIN, and creates that as the admin, retiring `manager` once it exists. Declining keeps `manager` and admin123 as before. The same prompt is available on demand afterwards.
-
-**Small motion, mostly for operators.** A few places that changed instantly now change noticeably. The lot verification panel shakes on a mismatch and pulses on a match. The master log stream's newest row flashes when a fresh entry lands. The "Drawing from Reactor X" tank icon gulps when a pour posts. The Undo button has a countdown ring that drains through its 120 seconds. Switching between Pouring, Downtime, Audit, Notes and Summary slides instead of snapping. The checklist unlock sweep is joined by the newly unlocked screen fading up. Buttons press down on touch, and the phone vibrates once on a normal submit.
-
----
-
-## 4.02 — Tuesday, September 15, 2026
-**The move-package encryption from 4.01 could fail outright on a real machine, and the resin tracking got a pass of fixes and a restored feature.**
-
-**Encrypting the move package failed with "Array dimensions exceeded supported range" on a real PC.** The encrypt step read the whole package into one byte array and then built a second full-size array for the ciphertext on top of that. That is well inside .NET's per-array ceiling for a package this size (a little under 200 MB), but a 32-bit PowerShell process, or one already short on contiguous address space, can hit the ceiling on a single sizeable array long before the file is anywhere near 2 GB. Rewritten to stream the package through in 1 MB chunks, so both directions hold a few MB at most no matter how large the package gets.
-
-**Unlocking the package on a work PC needed a file nobody was told to bring.** `Unlock_Move_Package.bat` has always needed `Unlock_Move_Package.ps1` next to it, but `Move_To_New_PC.bat`'s closing instructions only ever said to copy the `.bat` and the encrypted package. A work PC that got exactly the two files it was told to get failed immediately with "Unlock_Move_Package.ps1 is missing", with nothing to hint that a third file existed. The `.bat` is fully self-contained now. It carries a base64 copy of the script inside itself and unpacks it to a temp file.
-
-**`run_mes_api.bat` is gone, folded into `START_HERE.bat`.** START_HERE has always called itself the only entry point, but starting the app for real still meant calling out to a second file that people kept opening directly. Option 3 runs the same checks and the same launch inline now. The READMEs and the code comments that named `run_mes_api.bat` point at START_HERE instead.
-
-**Marking a reactor empty did not clear the resin.** It only closed the QC and dwell-time batch row. It never touched `Reactor.current_resin`, which is the field the pouring form and the tank wall both read. A tank marked empty kept matching new pours and kept drawing down exactly as if nothing had happened, which is how an operator (and a manager testing the same button) could log against a reactor everyone believed was empty. It clears the resin now as well as closing the batch.
-
-**Marking a reactor filled did not reset what the tank wall showed.** The level is worked out from production logs, not stored. It sums everything logged since the newest lot it can find for that resin and pump. Topping off with the same resin, which is the exact case this button exists for, left the old lot as the newest on record, so the wall kept counting down from before the top-off. Fixed to anchor a fresh lot when one is given, or fold in a calibration adjustment when it is not, so the level reads full immediately.
-
-**The same resin coming back to a pump it held before could read the wrong level.** This was the root cause behind both of the above. The "since when" boundary was worked out purely from lot text, with no memory of when the current occupancy actually began. A resin swapped away and back, before any fresh lot was logged, could still be showing draw-down from months earlier. It is anchored to the reactor's own batch-open time now.
-
-**The "Manage Permanent Reactor Fleet" panel bypassed all of that.** A manager picking a different resin from that dropdown never closed the old filling, never opened a new one and never touched the displayed level. It was a silent, unaudited way around every safeguard the other three fixes just added. Reassigning the resin there behaves like the changeover it is now: batch closed and reopened, level reset, and one audit line recording what changed and who did it. An edit that leaves the resin alone, like fixing a tag or a bay marker, still has no side effects.
-
-**Tank level reconciliation is back.** The old Streamlit app let a manager or operator correct a tank's level to what they read off the sight glass, recording the difference as its own event rather than silently overwriting a number. That code stayed in `crud.py`, fully tested, but never got a route or a screen in the rewrite, so there was no way to fix a drifted level short of editing the database by hand. There is a "Reconcile level" control on each reactor card again, by percentage or by exact litres.
-
----
-
-## 4.01 — Tuesday, September 15, 2026
-**The move-to-new-PC package is password protected, management can mark a reactor filled without waiting on a pump, and three real bugs that predate today got found and fixed along the way.**
+## 3.20 — Tuesday, September 15, 2026
+### The move-to-new-PC package is password protected, management can mark a reactor filled without waiting on a pump, and three real bugs that predate today got found and fixed along the way.
 
 **`pgserver` split out of the main install.** It has no wheel past Python 3.12, and `pip install -r requirements.txt` failing on it took the whole install down with it. Nothing installed, not even packages that had already resolved. It lives in its own `requirements-portable.txt` now, installed only by the bundled-database launcher. The main install path never sees it.
 
@@ -358,9 +292,27 @@ Reported right after 4.04's ability-based navigation fix went in. That fix filte
 
 **Documentation caught up.** The Operator Guide describes the skip-the-photo option. The handbook's device-gateway appendix lists the simulator and what it is for, and its test-suite count is current again. `dev/check_page_fit.py`, the tool that catches a document's content clipping off the bottom of a printed page, had a hardcoded Linux browser path that never once resolved on this Windows machine. Fixed, and it immediately caught a five-pixel clip on the operator guide that had been shipping unnoticed.
 
+### The move-package encryption from 4.01 could fail outright on a real machine, and the resin tracking got a pass of fixes and a restored feature.
+
+**Encrypting the move package failed with "Array dimensions exceeded supported range" on a real PC.** The encrypt step read the whole package into one byte array and then built a second full-size array for the ciphertext on top of that. That is well inside .NET's per-array ceiling for a package this size (a little under 200 MB), but a 32-bit PowerShell process, or one already short on contiguous address space, can hit the ceiling on a single sizeable array long before the file is anywhere near 2 GB. Rewritten to stream the package through in 1 MB chunks, so both directions hold a few MB at most no matter how large the package gets.
+
+**Unlocking the package on a work PC needed a file nobody was told to bring.** `Unlock_Move_Package.bat` has always needed `Unlock_Move_Package.ps1` next to it, but `Move_To_New_PC.bat`'s closing instructions only ever said to copy the `.bat` and the encrypted package. A work PC that got exactly the two files it was told to get failed immediately with "Unlock_Move_Package.ps1 is missing", with nothing to hint that a third file existed. The `.bat` is fully self-contained now. It carries a base64 copy of the script inside itself and unpacks it to a temp file.
+
+**`run_mes_api.bat` is gone, folded into `START_HERE.bat`.** START_HERE has always called itself the only entry point, but starting the app for real still meant calling out to a second file that people kept opening directly. Option 3 runs the same checks and the same launch inline now. The READMEs and the code comments that named `run_mes_api.bat` point at START_HERE instead.
+
+**Marking a reactor empty did not clear the resin.** It only closed the QC and dwell-time batch row. It never touched `Reactor.current_resin`, which is the field the pouring form and the tank wall both read. A tank marked empty kept matching new pours and kept drawing down exactly as if nothing had happened, which is how an operator (and a manager testing the same button) could log against a reactor everyone believed was empty. It clears the resin now as well as closing the batch.
+
+**Marking a reactor filled did not reset what the tank wall showed.** The level is worked out from production logs, not stored. It sums everything logged since the newest lot it can find for that resin and pump. Topping off with the same resin, which is the exact case this button exists for, left the old lot as the newest on record, so the wall kept counting down from before the top-off. Fixed to anchor a fresh lot when one is given, or fold in a calibration adjustment when it is not, so the level reads full immediately.
+
+**The same resin coming back to a pump it held before could read the wrong level.** This was the root cause behind both of the above. The "since when" boundary was worked out purely from lot text, with no memory of when the current occupancy actually began. A resin swapped away and back, before any fresh lot was logged, could still be showing draw-down from months earlier. It is anchored to the reactor's own batch-open time now.
+
+**The "Manage Permanent Reactor Fleet" panel bypassed all of that.** A manager picking a different resin from that dropdown never closed the old filling, never opened a new one and never touched the displayed level. It was a silent, unaudited way around every safeguard the other three fixes just added. Reassigning the resin there behaves like the changeover it is now: batch closed and reopened, level reset, and one audit line recording what changed and who did it. An edit that leaves the resin alone, like fixing a tag or a bay marker, still has no side effects.
+
+**Tank level reconciliation is back.** The old Streamlit app let a manager or operator correct a tank's level to what they read off the sight glass, recording the difference as its own event rather than silently overwriting a number. That code stayed in `crud.py`, fully tested, but never got a route or a screen in the rewrite, so there was no way to fix a drifted level short of editing the database by hand. There is a "Reconcile level" control on each reactor card again, by percentage or by exact litres.
+
 ---
 
-## 4.00 — Monday, September 14, 2026
+## 3.19 — Monday, September 14, 2026
 **Streamlit is gone. The FastAPI and React app is the only app now.**
 
 The migration this changelog has been tracking piece by piece since the operator form pilot is finished. `Home.py`, everything in `pages/`, `ui_shell.py`, `components.py`, `database.py`, `theme_engine.py`, `themes.py`, `.streamlit/` and `run_mes.bat` are deleted, not just unused. Streamlit and its add-ons are out of `requirements.txt`. START_HERE.bat no longer offers a Streamlit option. The two launchers, one for a real PostgreSQL install and one for the bundled database, are the only ways to start the app.
@@ -388,8 +340,20 @@ Six test files that only tested Streamlit's own rendering are deleted with it, a
 
 ---
 
-## 3.47 — Friday, September 11, 2026
-**Streamlit reruns the entire page on every input — mitigated on two spots on the operator screen, more to come**
+
+## 3.18 — Friday, September 11, 2026
+### Security posture, findings 1, 5, 6, 7 and 8
+
+Went through `Formlabs_MES_Security_Posture.pdf` (PT-V3.46) one finding at a time. Found a stray, non-functional set of Ruby on Rails files sitting in the project (`app/models/`, `database/migrations/`) that something else had dropped in while apparently trying to fix Finding 5 — deleted them; this is a Python project with no Ruby anywhere in it, and the real fix for Finding 5 (the `ResinSpecHistory` audit trail in `models.py`/`crud.py`) was already in place. Finding 8 (the mDNS announcer ignoring the gateway toggle) turned out to already be fixed too — `service_announcer.py` already checks `enable_device_gateway` before it broadcasts anything, I just hadn't crossed it off the list.
+
+- **Finding 1, plain HTTP, closed.** `setup/generate_tls_cert.py` writes a self-signed certificate to `certs/mes.crt` / `mes.key`, covering this PC's hostname, LAN IP, `localhost` and `127.0.0.1`. `run_mes.bat` and `START_HERE.bat` (option 3) pick it up automatically and serve HTTPS instead of HTTP whenever both files are present; option 8 generates or renews one by hand. `install_mes.bat` now runs it as step 7 of setup, and `_preflight.py` reports the certificate's presence and expiry.
+- Self-signed means a one-time "not trusted" warning on each phone the first time it connects — expected, not a bug. An internal CA certificate can go in at the same two paths instead.
+- Added `cryptography` to `requirements.txt` for the cert generation; I haven't pinned it to an exact version yet, since it's a brand-new dependency and there's no venv here to read the installed version off of.
+- **Finding 6, unsigned update packages, closed.** `setup/update_signing.py` is the one place both `dev/make_update.py` and `setup/apply_update.py` now agree on what a signature covers. Every build signs its manifest with an Ed25519 private key (`dev/update_signing_private.pem`, never committed, created once with `dev/make_update.py --init-keys`); `apply_update.py` checks it against `setup/update_signing_public.pem` (committed — not a secret) right after the checksum check, and refuses the update, same as before, if it's missing or doesn't match. A checksum only ever proved a file arrived intact; this is what proves it actually came from me.
+- `_preflight.py` now also reports whether `setup/update_signing_public.pem` is present.
+- **Finding 7, plain-text gateway credentials, closed.** `gateway_crypto.py` encrypts `Device.connection_json` (MQTT/OPC-UA usernames and passwords, mainly) at the one boundary that ever touches it, `device_crud.py` — every page and protocol adapter still just hands over a plain `connection` dict and has no idea encryption exists underneath. The key lives in `.env` as `GATEWAY_ENCRYPTION_KEY`, generated automatically the first time any device is ever saved, so a plant that never touches the gateway never gets one. It reads a plain-JSON row from before this fix without complaint, so I had nothing to migrate — no devices were configured here yet anyway.
+
+### Streamlit reruns the entire page on every input — mitigated on two spots on the operator screen, more to come
 
 `Operator_Form.py` reruns top to bottom on every widget interaction, which is just how Streamlit works, but it got reported from the floor as a jarring wait after typing or tapping anything. Two changes so far, both picked because neither one has any live cross-widget behaviour that a rerun-per-keystroke was actually holding up:
 
@@ -450,24 +414,14 @@ Section 8 of the security posture doc flagged this as the one open finding that 
 - The operator's quick-reference panel no longer shows the SKU or internal resin code — only what a pour is actually checked against: container format, resin name, target/min/max weight and the kg conversion. It's a plain HTML table now (the same pattern `Mgr_Resin_Canvas.py` already used for its own table) instead of `st.dataframe`, so there's no built-in export button to click.
 - The full table, SKUs included, along with add/edit/delete, stays exactly where it already was — the manager-only Resin Canvas page, behind `manage_resins`, unchanged.
 
-## 3.46 — Friday, September 11, 2026
-**Security posture, findings 1, 5, 6, 7 and 8**
+---
 
-Went through `Formlabs_MES_Security_Posture.pdf` (PT-V3.46) one finding at a time. Found a stray, non-functional set of Ruby on Rails files sitting in the project (`app/models/`, `database/migrations/`) that something else had dropped in while apparently trying to fix Finding 5 — deleted them; this is a Python project with no Ruby anywhere in it, and the real fix for Finding 5 (the `ResinSpecHistory` audit trail in `models.py`/`crud.py`) was already in place. Finding 8 (the mDNS announcer ignoring the gateway toggle) turned out to already be fixed too — `service_announcer.py` already checks `enable_device_gateway` before it broadcasts anything, I just hadn't crossed it off the list.
-
-- **Finding 1, plain HTTP, closed.** `setup/generate_tls_cert.py` writes a self-signed certificate to `certs/mes.crt` / `mes.key`, covering this PC's hostname, LAN IP, `localhost` and `127.0.0.1`. `run_mes.bat` and `START_HERE.bat` (option 3) pick it up automatically and serve HTTPS instead of HTTP whenever both files are present; option 8 generates or renews one by hand. `install_mes.bat` now runs it as step 7 of setup, and `_preflight.py` reports the certificate's presence and expiry.
-- Self-signed means a one-time "not trusted" warning on each phone the first time it connects — expected, not a bug. An internal CA certificate can go in at the same two paths instead.
-- Added `cryptography` to `requirements.txt` for the cert generation; I haven't pinned it to an exact version yet, since it's a brand-new dependency and there's no venv here to read the installed version off of.
-- **Finding 6, unsigned update packages, closed.** `setup/update_signing.py` is the one place both `dev/make_update.py` and `setup/apply_update.py` now agree on what a signature covers. Every build signs its manifest with an Ed25519 private key (`dev/update_signing_private.pem`, never committed, created once with `dev/make_update.py --init-keys`); `apply_update.py` checks it against `setup/update_signing_public.pem` (committed — not a secret) right after the checksum check, and refuses the update, same as before, if it's missing or doesn't match. A checksum only ever proved a file arrived intact; this is what proves it actually came from me.
-- `_preflight.py` now also reports whether `setup/update_signing_public.pem` is present.
-- **Finding 7, plain-text gateway credentials, closed.** `gateway_crypto.py` encrypts `Device.connection_json` (MQTT/OPC-UA usernames and passwords, mainly) at the one boundary that ever touches it, `device_crud.py` — every page and protocol adapter still just hands over a plain `connection` dict and has no idea encryption exists underneath. The key lives in `.env` as `GATEWAY_ENCRYPTION_KEY`, generated automatically the first time any device is ever saved, so a plant that never touches the gateway never gets one. It reads a plain-JSON row from before this fix without complaint, so I had nothing to migrate — no devices were configured here yet anyway.
-
-## 3.38 – 3.45 — Wednesday, September 9, 2026
+## 3.17 — Wednesday, September 9, 2026
 **The day before test day**
 
-Ten releases. Same as the 7th, they are under one heading and sorted by subject, with the version numbers in brackets so I can still find any of it in the history.
+Ten releases that day, folded into this one entry and sorted by subject rather than by the order they shipped in.
 
-### Going over the documents before test day *(3.38)*
+### Going over the documents before test day
 
 My lead told me tomorrow is test day, so I read the handbook, the operator guide and the one-pager against what the app actually does now. Some of it was out of date and some of it was wrong.
 
@@ -494,7 +448,7 @@ Every page in those documents is a fixed sheet with the overflow hidden, so anyt
 
 - **The operator nav had a Live SCADA link that bounces.** The page is manager and admin only now and sends an operator straight back to the form, so the link went. The sidebar was narrowed when that changed and this bar was missed.
 
-### The dashboard link that was still there in four places *(3.39)*
+### The dashboard link that was still there in four places
 
 I fixed this yesterday and I only fixed one of them. Running today I still had Live SCADA on the operator form's side menu, and on the reactor screen it was on the top bar and in the side menu as well. The top bar of the form was the one I had fixed, so the two bars on the same screen disagreed with each other, which is worse than not having started.
 
@@ -512,7 +466,7 @@ Analytics Hub had no door on it at all. It came off the operator's menu when I n
 - **Analytics Hub refuses anyone who is not a manager or an admin**, the same way the Manager Cockpit already did.
 - The roles suite now checks both pages have that door, not just that the menu is right.
 
-### A manager can give one person extra abilities *(3.40)*
+### A manager can give one person extra abilities
 
 A role is a starting point, not a description of a person. I am a floor operator and I built this, so I need screens no operator needs, and the answer to that should not be to hand me a manager account and have every report count me as one. Somebody else will end up in the same spot.
 
@@ -531,7 +485,7 @@ The bug I keep hitting is not a permission hole, it is the same rule written dow
 - **One menu.** Every navigation bar and every sidebar list in the app is drawn from a single definition. There were six copies of that list. A test fails if a seventh appears.
 - Every management screen refuses on the ability, not on a role name. Thirteen doors, one rule.
 
-### Updates arrive as one file I drop in a folder *(3.41)*
+### Updates arrive as one file I drop in a folder
 
 Once this is on the floor I cannot patch it the way I do at home, and I am not running git on that PC. I would rather walk over with a USB stick. So: one file, one folder, one menu option.
 
@@ -556,9 +510,9 @@ After the files are in, it compiles every one of them and then starts the app, w
 
 On my side `dev/make_update.py` builds the zip from whatever changed since the version on the plant PC.
 
-### A tank sets itself up from what the operator already types *(3.42)*
+### A tank sets itself up from what the operator already types
 
-I added a reactor in IT Admin and the level still did not move. I had to go back in as a manager and set the pump and the resin on it by hand. That is the exact thing 3.30 was meant to end.
+I added a reactor in IT Admin and the level still did not move. I had to go back in as a manager and set the pump and the resin on it by hand. That is the exact thing the 3.16 entry was meant to end.
 
 Three holes in it.
 
@@ -578,7 +532,7 @@ Ten new checks in `tests/test_reactor_level.py` cover all three holes and the tw
 
 Also `dev/run_tests.py`. The test scripts wanted `pgserver`, which only builds on Linux and macOS, so on this machine every one of them died before it ran a single check. It reads the address out of `.env`, points a scratch database at the same server, and runs whichever script you name.
 
-### QC times, and how long resin sits in a reactor *(3.45.1)*
+### QC times, and how long resin sits in a reactor
 
 My manager asked when resin goes to QC, how long it is there, when it comes out, and how long it sits in the reactor. All four are durations, and a duration needs two ends. The tank level is worked out from the logs every time somebody looks, so there was nothing to measure between and nothing to hang a QC result on.
 
@@ -594,7 +548,7 @@ A filling of a vessel is a record now. It opens when a vessel is changed over an
 
 The page says plainly that QC times are hand entered. A turnaround figure built from when somebody got to a screen measures data entry, not QC.
 
-### Two lines of work merged, and a test that was writing to the live database *(3.45.2)*
+### Two lines of work merged, and a test that was writing to the live database
 
 Two sessions built releases the same day and both numbered a migration 0020. Two migrations with the same parent gives the database two heads and it stops migrating at all, so the batch one is 0021 now and follows the pump rates.
 
@@ -602,7 +556,7 @@ Two sessions built releases the same day and both numbered a migration 0020. Two
 - **requirements.txt lists the versions actually installed here.** It pinned `numpy==2.5.2`, which needs Python 3.12, and this PC runs 3.11 with 2.4.6. A fresh install died on that line, and the offline package bundle came out empty. Ten unused Google API packages went with it.
 - **Diagnose this PC checks the two documents are present**, and IT Admin links the update guide.
 
-### One place to register a vessel *(3.45)*
+### One place to register a vessel
 
 The reactor fleet is off the Master Plant Equipment section in IT Admin. It lives on the Live Reactors page, which is where I actually go.
 
@@ -611,7 +565,7 @@ Both screens could add and delete a tank. The reactor page does more. It sets th
 - IT Admin is pump stations and downtime codes now. Two columns instead of three, with a link across to the reactor page.
 - Nobody loses anything. Adding and editing reactors is one ability and both administrators and managers hold it, so anyone who could open that section can already open the fleet expander.
 
-### What the plant is expected to pour, worked out instead of typed *(3.44)*
+### What the plant is expected to pour, worked out instead of typed
 
 One number for the whole floor. Four hundred litres an hour, times however long the shift had been running, and that was every pace figure in the application. It cannot be right two days running. A day with one pourer read sixty per cent behind and a day with three read comfortably ahead, and the only lever anybody had was to retype the number, which then had to be retyped tomorrow.
 
@@ -629,7 +583,7 @@ Three things I decided against. Dividing the plant target by how many people are
 
 New `pace.py`, and `tests/test_pace.py` covering all of it, including the case where a certified pump pours nothing and is still expected to have poured.
 
-### The wall display *(3.43)*
+### The wall display
 
 Four things, and two of them had been wrong since I built it.
 
@@ -647,12 +601,13 @@ Four things, and two of them had been wrong since I built it.
 - **No bar across the top of this page.** A row of page links is not something anybody presses from the far end of a plant. The same menu is in the sidebar, drawn from the same shared definition, so this page still cannot drift from what the abilities allow.
 ---
 
-## 3.27 – 3.37 — Tuesday, September 8, 2026
+
+## 3.16 — Tuesday, September 8, 2026
 **Everything the first real shift turned up**
 
-Eleven releases. Nearly all of it came out of watching the app get used for real instead of me testing it at home. One heading, sorted by subject, version numbers in brackets.
+Eleven releases that day. Nearly all of it came out of watching the app get used for real instead of me testing it at home. One heading, sorted by subject.
 
-### Eleven manager pages refused a refresh *(3.28)*
+### Eleven manager pages refused a refresh
 
 Scrap Intelligence, Historical, Log Management, Assigned Runs, Lot Verification, Cleanliness, Resin Canvas, Roster, Google Sync, Floor Comms and the Theme Gallery all checked your role before restoring your session. On a cold load there is no session yet, so all eleven answered Access Denied to a manager with every right to be there.
 
@@ -664,7 +619,7 @@ Press F5 on any of them and you were locked out. Same for a bookmark, or a link 
 
 Still open: Analytics Hub and IT Admin come back as an empty shell when opened by URL. They restore the session properly, so it is something else. Clicking through to them works, which is why nobody has hit it.
 
-### Two from the first day of real use *(3.29)*
+### Two from the first day of real use
 
 **A tank could not be linked to anything.** I created a reactor in IT Admin and the level never moved. It turns out a vessel's level is worked out from the logs matching its pump and its resin, and the only code that ever set those two fields was work-order dispatch. We run with work orders off. So the add form asked for a name and a capacity, nothing set the other two ever, and every tank sat at full while the floor emptied it.
 
@@ -676,7 +631,7 @@ Still open: Analytics Hub and IT Admin come back as an empty shell when opened b
 
 - On a phone it is pinned to the bottom of the screen now, where the thumb already is. On anything wider it stays where it was.
 
-### The submit button goes away for five seconds after a log lands *(3.37)*
+### The submit button goes away for five seconds after a log lands
 
 On the run where the confirmation was not showing up, I kept pressing Submit because I could not tell whether anything had happened. Every one of those presses wrote a real log with a real photo attached. Nothing looked wrong afterwards, which is the problem with a duplicate hourly count.
 
@@ -688,7 +643,7 @@ The banner is fixed and it sits at the bottom of the screen on a phone now. This
 - **Packing gets the same lock.** A packing count is as easy to send twice.
 - Five seconds because a second press after that is a decision rather than a reflex, and because two real pours back to back should not leave anybody standing there waiting.
 
-### The floor sets it up, not a manager *(3.30)*
+### The floor sets it up, not a manager
 
 We run this as a logging system, so a manager opening a settings page to make the app work is a design fault. The operator already picks the pump and the resin every hour. The only thing missing was which physical tank the pump draws from, and that is not in any log.
 
@@ -704,7 +659,7 @@ We run this as a logging system, so a manager opening a settings page to make th
 
 The lot check is what protects all of this. A pre-filled resin is a box that already holds a plausible answer, but the lot number is still typed off the container every hour, and that is what actually catches the wrong material.
 
-### Logging a pour into a container the app has never heard of *(3.36)*
+### Logging a pour into a container the app has never heard of
 
 Today I poured out of a drum into brown 1L bottles. There is no SKU for those bottles and no spec on file, and the Container Format dropdown only offers things the app knows the size of, so there was no honest way to log it. I know how many bottles I filled and how much went in. That should be enough.
 
@@ -725,7 +680,7 @@ The bigger problem was quieter. Every log takes its litres off the tank on that 
 
 Every log written before today is recorded as coming off the tank, which is what they were.
 
-### The SCADA page was answering the question fifth *(3.33)*
+### The SCADA page was answering the question fifth
 
 Six controls sat above every number on it: the time horizon, a date picker, then pump, resin, operator and shift. A manager opens that page to find out how the shift is going, and the first full screen was a control panel. The figures started below the fold.
 
@@ -737,7 +692,7 @@ Nobody touches those controls on most visits. Live Today, all pumps, all resins,
 
 The headline, the filter line and all four telemetry cards now fit above the fold on a 1400 px screen. Nothing was removed except the radio.
 
-### Operators get one screen, and both documents are one tap away *(3.34)*
+### Operators get one screen, and both documents are one tap away
 
 Operators had the full SCADA page. Not the plant figures that bothered me — their own numbers are on their own form and the guide promises those are the same ones management sees. It is that the whole page is a management view: every station at once, every operator ranked by name, the plant's pace against target. That is the right screen for whoever is running the shift and the wrong one to have open at a pump, where the job in front of you is one station and one cartridge. Rate still matters, and the people who act on it still see it.
 
@@ -752,7 +707,7 @@ Operators had the full SCADA page. Not the plant figures that bothered me — th
 - Both are served out of `static/`, and `dev/topdf.py` writes a copy there on every rebuild — otherwise the app would keep handing people last month's document with no sign that it had.
 - A test now checks that every document the app links to actually exists where it serves it from, and is not an empty file. A help link that 404s is worse than no help link: it tells an operator the guide does not exist.
 
-### The handbook link was only on two screens, and the machine gateway has a switch now *(3.35)*
+### The handbook link was only on two screens, and the machine gateway has a switch now
 
 I added the handbook link and then could not find it. The operator guide showed up on the form the way it should, but the manager one was missing from every page I actually work on.
 
@@ -773,7 +728,7 @@ That was the wrong way to say "not yet". A plant that did want to wire something
 - That screen used to be administrators only while the menu it sits in is open to managers as well. Both use the same rule now, so nobody clicks a link and gets told they are not allowed.
 - Turning the switch on registers nothing and polls nothing. The gateway process still has to be running and a device still has to be added by hand.
 
-### A wall worth looking up at, and somewhere for a crash to go *(3.27)*
+### A wall worth looking up at, and somewhere for a crash to go
 
 - **The shift finishing is a moment now.** When the pour reaches the target a green band goes across the whole wall and the laser makes one last pass down the finished cartridge. It holds about twenty-five seconds. Second shift gets its own.
 - My first version faded itself out after seven seconds. The timer starts when the browser inserts the element, not when the frame reaches the screen, so on a display nobody is standing at it could hit zero opacity having never been seen. The next refresh takes it away now.
@@ -801,7 +756,7 @@ That was the wrong way to say "not yet". A plant that did want to wire something
 - **One rhythm for movement.** It was 0.2s, 0.3s, 0.5s, 0.75s, 0.9s, 1s, 1.2s or 2.6s depending on the day I wrote it. Three durations and one curve now.
 - **A proper icon and name on a phone.** Saved to a home screen it used to be a browser glyph and a chopped-off address. It is the Formlabs mark and **Pouring Log** now. Operators see that every shift before they open anything.
 
-### The sign-in laser was striking twice *(3.31)*
+### The sign-in laser was striking twice
 
 Reported as a double glitch, and that is exactly what it was. The screen renders, the cookie component answers a moment later with what it found, and that answer re-runs the script. So the laser started, got about a third of the way down, and was replaced by a fresh one starting from the top. Two half-strokes.
 
@@ -811,7 +766,7 @@ Reported as a double glitch, and that is exactly what it was. The screen renders
 
 Measured rather than eyeballed: sampling the laser's position every 150 ms, it holds still, then runs top to bottom once, with no upward jumps.
 
-### More of the thing the sign-in screen does *(3.32)*
+### More of the thing the sign-in screen does
 
 The move people liked is an object revealed once as the screen arrives, and then stillness. It only works where there is a real arrival, so it went on the three screens that have one and nowhere else.
 
@@ -826,12 +781,13 @@ Nothing went on Analytics or the Cockpit. A sweep works because it is rare, and 
 
 ---
 
-## 3.19 – 3.25.1 — Monday, September 7, 2026
+
+## 3.15 — Monday, September 7, 2026
 **The last day before the floor test**
 
-Nine releases. I have put them under one heading and sorted them by subject rather than by release, with the version numbers in brackets so I can still find any of it in the history.
+Nine releases that day, put under one heading and sorted by subject rather than by the order they shipped in.
 
-### Making it look like a 3D printing company's app *(3.19)*
+### Making it look like a 3D printing company's app
 
 We print things for a living and the software did not show it anywhere. None of this changed how anything gets recorded.
 
@@ -841,7 +797,7 @@ We print things for a living and the software did not show it anywhere. None of 
 - The sign-in screen leads with a Form 4 and a laser passes over it once as the page loads. Once, not looping.
 - All the pictures are our own product renders. Nothing in here draws a Formlabs machine, it just positions and reveals the real ones.
 
-### Pouring an amount instead of counting containers *(3.20)*
+### Pouring an amount instead of counting containers
 
 The record could only say how many containers got filled and then multiply by a fixed size. That is right for cartridges and jugs and wrong for anything decanted. There was no way to write down "we put 180 litres into a drum". So it went in as the wrong number of cartridges, or it did not go in at all. Either way the tank it came out of was wrong from then on.
 
@@ -853,7 +809,7 @@ The record could only say how many containers got filled and then multiply by a 
 
 One bug caught before it shipped. The form picked its format by matching text, and "RPS (5L Bulk Jug)" has the word "Bulk" in it. Adding the drum option quietly turned every 5 litre jug into a measured pour and stopped lot-checking them. All 69 of the new sums passed while that was broken. The interface tests caught it.
 
-### The Google export, which took me four goes *(3.21 – 3.23)*
+### The Google export, which took me four goes
 
 It was broken because the destination was one line in a settings file, and that line was not set on this install at all. So the page could only ever say "webhook missing", and the fix lived on the server where nobody standing at the page could get to it.
 
@@ -866,13 +822,13 @@ It was broken because the destination was one line in a settings file, and that 
 - The time period picker never did anything. All four options exported every log ever recorded, so "Live Today" on two years of history sent two years of history. It filters now, and the row count is printed above the button.
 - One more of mine. Excel needs a package that was not installed here, and the download button builds its file while the page loads rather than when you press it. So the missing package did not fail a download, it took the whole page down. It only showed up once a wider date range gave the button some rows to work with. Something that only breaks once there is data in it will pass every check you make while writing it. CSV needs nothing, so that one is always there.
 
-### Two things quietly doing nothing *(3.24, 3.24.1)*
+### Two things quietly doing nothing
 
 **The messaging tab was promising somebody was listening.** Nothing in this app tells a manager a message has arrived. Not the home screen, not the sidebar, not the wall display. A manager sat at the PC all day would never know. But it was called "Direct Manager Communications", drawn like a chat, and sitting on the operator's screen. An operator typing "pump 2 is leaking" and going back to work thinking it was reported is the app swallowing something urgent. The data settles it, four messages ever, all from my account, all saying "test". It is called **Note to Management** now and says before you type that nobody is watching it live and to use the radio for anything urgent. I deleted nothing. Whether it earns a proper alert should come out of whether anyone uses it during testing.
 
 **Log Out looked like it did nothing.** It was revoking the session and clearing the cookie fine, but the signed-in screen stayed up until you hit refresh, so an operator handing a phone to the next shift had no way to know the account was actually signed out. Writing a cookie makes the browser reload the page, so the line after it never ran, and that line was the one that forgot who was signed in. I swapped the order. Nine logout buttons also had a line after "go to the home page" that could never run.
 
-### Weekends, and phones *(3.25, 3.25.1)*
+### Weekends, and phones
 
 - **The stopped-record alarm did not know it was Saturday.** It asks the shift clock whether a shift is running, and the clock only knew what time it was. Every day looked like a working day, so Saturday at six in the morning read as Shift 1 running with nothing logged, and the wall put up an alarm about a weekend. Every week. If it fires when nothing is wrong then by Monday nobody reads it. There are seven checkboxes under IT Admin now for the days the plant runs. A shift counts by the day it starts, so a Friday night shift is still watched into Saturday morning. It defaults to every day, so I need one visit to IT Admin to switch the weekend off.
 - **Half the operator form was off the side of the phone.** I measured it at 390 px wide. The four tab labels wanted 642 px of room and had 358, so only two of them were visible. The other two sat off the right edge behind a scroll nobody finds. They are Pouring, Downtime, Audit and Notes now, and all four fit.
@@ -880,12 +836,13 @@ It was broken because the destination was one line in a settings file, and that 
 
 ---
 
-## 3.17 – 3.18 — Sunday, September 6, 2026
+
+## 3.14 — Sunday, September 6, 2026
 **The app running somewhere I am not standing**
 
-Two releases. Both are about the app looking after itself on a machine nobody is watching.
+Two releases that day. Both are about the app looking after itself on a machine nobody is watching.
 
-### Two things failing where nobody is looking *(3.17)*
+### Two things failing where nobody is looking
 
 - **Backups happen on their own now.** The backup function always worked, but nothing ran it on a schedule, so whether the data was protected came down to whoever last pressed the button. There is no scheduler on a floor PC, so the check rides on the app being opened. If the newest backup is over twenty hours old, take one. The last fortnight is kept, because a full disk is the same outage backups exist to survive.
 - IT Admin shows the state. Green with the age of the newest backup, orange when it is days old, red when there has never been one. A section with nothing but a button on it does not tell a manager whether the plant is protected.
@@ -897,7 +854,7 @@ Two bugs caught in that work before it shipped. A backup dated in the future was
 
 Also deleted some dead code. `Home.py` still carried its own add- and delete-reactor functions, which did not know about vessel type, asset tag or bay marker. Anyone wiring them up would have created half-configured vessels. And the shift clock moved out of a page into `shift_clock.py`, because the wall display needed to know whether a shift was running and the only correct answer lived inside a page.
 
-### Getting the app ready to be carried onto the floor, and moved twice *(3.18)*
+### Getting the app ready to be carried onto the floor, and moved twice
 
 Testing starts next week. A laptop on the floor first, then a permanent PC. That is two moves, and the second one carries real production data.
 
@@ -911,12 +868,13 @@ Testing starts next week. A laptop on the floor first, then a permanent PC. That
 
 ---
 
-## 3.13 – 3.15 — Saturday, September 5, 2026
+
+## 3.13 — Saturday, September 5, 2026
 **Browser faults, and the tanks**
 
-Three releases. The first is three faults reported off the floor that only happen in a browser. The other two are both the vessels.
+Three releases that day. The first is three faults reported off the floor that only happen in a browser. The other two are both the vessels.
 
-### Three faults from the floor that only happen in a browser *(3.13)*
+### Three faults from the floor that only happen in a browser
 
 No new features. The three have the same thing in common. Each one was an action that needs the browser to receive the current screen, followed straight away by a refresh that throws that screen away. Python saw success every time.
 
@@ -928,7 +886,7 @@ No new features. The three have the same thing in common. Each one was an action
 - Confirmations go through `utils.flash` now, which stores the message so it survives the refresh and shows it at the top of the next screen. I made it a banner instead of a pop-up on purpose. A banner stays until the next action. A pop-up vanishes after four seconds whether or not anybody was looking, and looking away is what an operator does between screen and pump. Eleven of them moved over.
 - **The QR checksheet button was on the wrong side of a wall.** The startup checklist asks the operator to confirm they have scanned the daily station QR code, and the button that opens it sat behind the gate they cannot pass until they tick that very box. So entering the address in IT Admin looked like it did nothing.
 
-### The reactor levels were never a reactor feature *(3.14)*
+### The reactor levels were never a reactor feature
 
 Reported from the floor. With work orders disabled, the Live Reactor page was confidently wrong. Every tank drained to empty on the first day and stayed there, and the figures on the way down were understated by up to five times.
 
@@ -943,7 +901,7 @@ I reproduced it on a throwaway database first. A 5,000 L tank with two lots behi
 - The tank card's second line is the lot instead of the operator, since that is the thing somebody at the vessel can check against the container in front of them.
 - The kilogram figure no longer depends on container format. A 1,110 g cartridge in 1 L and a 5,550 g jug in 5 L are the same 1.11 kg per litre. It was only ever a density.
 
-### The fleet wall redrawn as the vessels actually out there *(3.15)*
+### The fleet wall redrawn as the vessels actually out there
 
 I took photographs of the supply vessels and pump carts. They turned out to be three completely different things, and the page had been drawing all of them as the same rounded rectangle.
 
@@ -959,6 +917,7 @@ Every fabricated vessel is built the same way. A bolted top flange, a barrel, a 
 One caught before it shipped. Colour gradients are referenced by name, four vessels share one page, and duplicate names all resolve to the first. So every tank after the first would have drawn the first tank's colour, at the right level, on a wall whose whole job is being recognised by colour from across the room. Nothing would have looked broken.
 
 ---
+
 
 ## 3.12 — Friday, September 4, 2026
 **One switch decides what this is: a logging system or an execution system**
@@ -982,6 +941,7 @@ And first-time setup defaults to a clean database now. `Setup_On_New_PC.bat` ref
 
 ---
 
+
 ## 3.11 — Thursday, September 3, 2026
 **A readiness pass before testing at the plant**
 
@@ -997,6 +957,7 @@ No new features. The honest answer on whether the build was floor-ready was not 
 The browser tests came out of this. The existing ones run the pages but render nothing, so none of them can see a control that is off-screen, a click that does nothing, or a page that failed after it drew. The new one drives a real browser through an operator's first hour, then does the whole thing again at phone size.
 
 ---
+
 
 ## 3.10 — Wednesday, September 2, 2026
 **Fill weight, two shifts, light themes, and a floor-usability pass**
@@ -1028,6 +989,7 @@ The browser tests came out of this. The existing ones run the pages but render n
 
 ---
 
+
 ## 3.9 — Tuesday, September 1, 2026
 **Resin colour identity everywhere a resin is named**
 
@@ -1053,6 +1015,7 @@ Three fixes to the move-to-a-new-PC scripts the same day:
 Also a Postgres version check on the same script. This database is 18, and an 18 dump uses syntax older versions cannot read. Hand it to a version 16 tool and the restore dies on line 5 with a message that says nothing about the actual problem. And an optional offline-packages step in `Move_To_New_PC.bat`, because a work PC often cannot reach the package servers and that failure arrives several minutes into setup as a wall of red text.
 
 ---
+
 
 ## 3.8 — Monday, August 31, 2026
 **Cartridge lot verification, per-station checklists, and the credentials out of git**
@@ -1088,6 +1051,7 @@ And killed the default sidebar navigation properly instead of hiding it. Every p
 
 ---
 
+
 ## 3.7 — Sunday, August 30, 2026
 **Machine integration, and a batch of operator fixes**
 
@@ -1113,6 +1077,7 @@ The floor fixes that day:
 
 ---
 
+
 ## 3.6 — Saturday, August 29, 2026
 **Migrations, real password hashing, and joining up the records**
 *Three releases this day.*
@@ -1134,6 +1099,7 @@ The floor fixes that day:
 
 ---
 
+
 ## 3.5 — Friday, August 28, 2026
 **The zombie-cookie logout bug, and the app going into version control**
 
@@ -1144,6 +1110,7 @@ The floor fixes that day:
 - Gave IT Administrators the same equipment rights as plant managers in Live Reactors, so they are not blocked from fixing floor equipment by a check that only anticipated managers.
 
 ---
+
 
 ## 3.4 — Thursday, August 27, 2026
 **IT Admin console, role-aware navigation, sessions that survive a refresh**
@@ -1165,6 +1132,7 @@ The floor fixes that day:
 
 ---
 
+
 ## 3.3 — Wednesday, August 26, 2026
 **Access control, confidentiality, and making it usable on a tablet**
 *Two releases this day.*
@@ -1180,6 +1148,7 @@ The floor fixes that day:
 
 ---
 
+
 ## 3.2 — Tuesday, August 25, 2026
 **Compliance gates, tank reconciliation, and being able to restore the data**
 
@@ -1191,6 +1160,7 @@ The floor fixes that day:
 
 ---
 
+
 ## 3.1 — Monday, August 24, 2026
 **Analytics, theming, and a way to talk to the floor**
 
@@ -1198,9 +1168,10 @@ The floor fixes that day:
 - **The live pace engine** on top of that. Current rate against target, projected end-of-shift output, and the gap between them, recalculated as logs come in. Knowing at hour three that you are going to miss by 200 is worth a lot more than knowing at hour eight that you did.
 - The theming system, a multi-theme design layer with responsive layout rather than one fixed set of colours. Part of that is that a screen in a bright pouring area and a screen at a desk want different things. Part of it is that people use software more willingly when it does not feel imposed on them.
 - Automatic shift handover reports, a generated PDF emailed to a list at the end of a shift with nobody having to remember. Handover was being done verbally and inconsistently, so what the next shift knew depended entirely on who was standing there. Removed on September 4th, see 3.12.
-- Floor comms, direct messaging between plant leadership and floor staff inside the app. The alternative was walking across the plant or hoping someone saw a text. Renamed and honestly labelled on September 7th, see 3.24.
+- Floor comms, direct messaging between plant leadership and floor staff inside the app. The alternative was walking across the plant or hoping someone saw a text. Renamed and honestly labelled on September 7th, see 3.15.
 
 ---
+
 
 ## 3.0 — Sunday, August 23, 2026
 **The foundation**
