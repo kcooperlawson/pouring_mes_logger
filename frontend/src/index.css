@@ -242,3 +242,58 @@ button:not(:disabled):active {
   40% { transform: scale(1.06); }
   100% { transform: scale(1); }
 }
+
+/* A career milestone - rarer than a good pour, so it gets a beat of its own. */
+@keyframes fl-tier-pop {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.06); filter: brightness(1.35); }
+  100% { transform: scale(1); }
+}
+
+/* The submit button filling like a cartridge while the pour is in flight. */
+@keyframes fl-submit-fill {
+  0%   { width: 0%; opacity: 0.85; }
+  80%  { width: 100%; opacity: 0.5; }
+  100% { width: 100%; opacity: 0; }
+}
+
+/* A newly logged row arriving in the live stream, rather than appearing. */
+@keyframes fl-row-in {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* A breakdown bar drawing itself, so the comparison is watched being made. */
+@keyframes fl-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+/* Switching manager screens. Short on purpose: this happens all day. */
+@keyframes fl-page-in {
+  from { transform: translateY(6px); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
+
+/* The padlock on the last checklist box. */
+@keyframes fl-unlock {
+  0%   { transform: rotate(0deg) scale(1); }
+  45%  { transform: rotate(-18deg) scale(1.25); }
+  100% { transform: rotate(0deg) scale(1); }
+}
+
+/* A vessel with resin in it, breathing. Slow enough to read as ambient
+   rather than as something demanding attention. */
+.fl-tank-live svg { animation: fl-tank-breathe 6s ease-in-out infinite; }
+@keyframes fl-tank-breathe {
+  0%, 100% { filter: brightness(1); }
+  50%      { filter: brightness(1.07); }
+}
+
+/* Leaderboard places changing hands. */
+.fl-reorder { transition: transform 420ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-tank-live svg { animation: none; }
+  .fl-reorder { transition: none; }
+}

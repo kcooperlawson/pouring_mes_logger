@@ -401,7 +401,7 @@ export function ManagerShell() {
               actually paints BEFORE a position:absolute z-0 element in CSS's
               own stacking rules, which would otherwise put the "background"
               flourish on top of the page. */}
-          <div className="relative z-10">
+          <div className="relative z-10" key={tab} style={{ animation: 'fl-page-in 260ms cubic-bezier(0.22,0.61,0.36,1) both' }}>
           {(user?.role === 'manager' || user?.role === 'admin') && <UpdateBanner />}
           {tab === 'cockpit' && (
             <ManagerCockpitHub

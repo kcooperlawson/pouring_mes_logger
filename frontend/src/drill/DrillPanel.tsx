@@ -3,6 +3,7 @@ import { useState, type ReactNode } from 'react'
 import { cleanlinessApi } from '../api/cleanliness'
 import { drillApi, type DrillBreakdownRow, type DrillFilter, type DrillLog, type DrillOut } from '../api/drill'
 import { lotVerificationApi } from '../api/lotVerification'
+import { motionOff, stagger } from '../shell/motion'
 import { fl } from '../theme'
 import { Drill, useDrill } from './DrillContext'
 
@@ -35,9 +36,16 @@ const CHIP_LABEL: Record<string, string> = {
   shift: 'Shift', date_from: 'From', date_to: 'To',
 }
 
-function Section({ label, count, children, open = true }: { label: string; count?: number; children: ReactNode; open?: boolean }) {
+// Sections arrive one after another rather than all at once, so the panel
+// reads as being assembled in front of you - which is also what stops a long
+// panel landing as a wall of tables.
+function Section({ label, count, children, open = true, index = 0 }: { label: string; count?: number; children: ReactNode; open?: boolean; index?: number }) {
   return (
-    <details open={open} className={`${fl.card} group`}>
+    <details
+      open={open}
+      className={`${fl.card} group`}
+      style={motionOff() ? undefined : { animation: `fl-fade-up 320ms ${stagger(index)}ms cubic-bezier(0.22,0.61,0.36,1) both` }}
+    >
       <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold text-[var(--fl-ink)]">
         <span>{label}{count !== undefined && <span className={`ml-2 text-xs ${fl.muted}`}>{count}</span>}</span>
         <span className={`text-sm ${fl.muted} transition group-open:rotate-90`}>›</span>
@@ -66,10 +74,15 @@ function Breakdown({ label, rows, narrow }: { label: string; rows: DrillBreakdow
     <div>
       <p className={`${fl.label} mb-1`}>By {label}</p>
       <div className="flex flex-col gap-1">
-        {rows.slice(0, 12).map((row) => (
+        {rows.slice(0, 12).map((row, i) => (
           <Drill key={row.key} f={narrow(row.key)} block className="rounded">
             <div className="relative overflow-hidden rounded border border-[var(--fl-border)] px-2 py-1 text-xs">
-              <div className="absolute inset-y-0 left-0 bg-[var(--fl-accent)]/20" style={{ width: `${(row.units / max) * 100}%` }} />
+              <div
+                className="absolute inset-y-0 left-0 bg-[var(--fl-accent)]/20"
+                style={motionOff()
+                  ? { width: `${(row.units / max) * 100}%` }
+                  : { width: `${(row.units / max) * 100}%`, animation: `fl-bar-grow 520ms ${stagger(i, 35, 260)}ms cubic-bezier(0.22,0.61,0.36,1) both` }}
+              />
               <div className="relative flex justify-between gap-2">
                 <span className="truncate text-[var(--fl-ink)]">{row.key}</span>
                 <span className="shrink-0 tabular-nums text-[var(--fl-body)]">
@@ -233,7 +246,7 @@ export function DrillPanel() {
               )}
 
               {s.logs > 0 && (
-                <Section label="Breakdown">
+                <Section index={0} label="Breakdown">
                   <div className="grid gap-3 sm:grid-cols-2">
                     {everyone && <Breakdown label="operator" rows={s.breakdown.operator} narrow={narrow('operator')} />}
                     <Breakdown label="pump" rows={s.breakdown.pump} narrow={narrow('pump')} />
@@ -249,7 +262,7 @@ export function DrillPanel() {
               )}
 
               {logs.length > 0 && (
-                <Section label="Every log" count={s.logs}>
+                <Section index={1} label="Every log" count={s.logs}>
                   <div className="mb-2 flex justify-end">
                     <button className={fl.btnSecondary} onClick={() => downloadCsv(logs, title(f, data))}>⬇ CSV</button>
                   </div>
@@ -297,7 +310,7 @@ export function DrillPanel() {
               )}
 
               {data.runs.length > 0 && !data.run && (
-                <Section label="Runs" count={data.runs.length}>
+                <Section index={2} label="Runs" count={data.runs.length}>
                   <div className="flex flex-col gap-1">
                     {data.runs.map((r) => (
                       <Drill key={r.id} f={{ run_id: r.id }} block className="rounded">
@@ -318,7 +331,7 @@ export function DrillPanel() {
               )}
 
               {data.batches.length > 0 && (
-                <Section label="Vessel batches" count={data.batches.length} open={!!(f.lot || f.reactor)}>
+                <Section index={3} label="Vessel batches" count={data.batches.length} open={!!(f.lot || f.reactor)}>
                   <table className="w-full text-left text-xs">
                     <thead className={fl.tableHead}>
                       <tr><th className="py-1 pr-2">Vessel</th><th className="py-1 pr-2">Resin / lot</th><th className="py-1 pr-2">Filled</th><th className="py-1 pr-2">Emptied</th><th className="py-1 pr-2">QC</th></tr>
@@ -339,7 +352,7 @@ export function DrillPanel() {
               )}
 
               {data.verifications.length > 0 && (
-                <Section label="Cartridge lot checks" count={data.verifications.length} open={!!f.lot}>
+                <Section index={4} label="Cartridge lot checks" count={data.verifications.length} open={!!f.lot}>
                   <table className="w-full text-left text-xs">
                     <thead className={fl.tableHead}>
                       <tr><th className="py-1 pr-2">When</th><th className="py-1 pr-2">Who</th><th className="py-1 pr-2">Typed</th><th className="py-1 pr-2">Result</th><th className="py-1 pr-2" /></tr>
@@ -364,7 +377,7 @@ export function DrillPanel() {
               )}
 
               {data.downtime.length > 0 && (
-                <Section label="Downtime" count={data.downtime.length}>
+                <Section index={5} label="Downtime" count={data.downtime.length}>
                   <table className="w-full text-left text-xs">
                     <thead className={fl.tableHead}>
                       <tr><th className="py-1 pr-2">When</th><th className="py-1 pr-2">Where</th><th className="py-1 pr-2">Why</th><th className="py-1 pr-2 text-right">Min</th></tr>
@@ -384,7 +397,7 @@ export function DrillPanel() {
               )}
 
               {data.audits.length > 0 && (
-                <Section label="Photo audits" count={data.audits.length} open={false}>
+                <Section index={6} label="Photo audits" count={data.audits.length} open={false}>
                   <table className="w-full text-left text-xs">
                     <tbody>
                       {data.audits.map((a) => (

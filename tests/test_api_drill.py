@@ -112,8 +112,37 @@ body = client.get("/api/drill", params={"lot": "LOT-D1", "operator": "Someone El
 check(all(l["operator_name"] == "Demo Operator" for l in body["logs"]),
       "...even when they ask for somebody else by name")
 
+# --- the release notes, for whoever is standing at the PC --------------------
+# Not a drill concern, but it lives on the same "any signed-in person may
+# read it" footing and there is a session open here to prove it with.
+notes = client.get("/api/updates/changelog")
+check(notes.status_code == 200, f"an operator can read what changed (got {notes.status_code})")
+body = notes.json()
+check(body["version"] and body["markdown"].lstrip().startswith("#"),
+      f"...and it is this PC's own VERSION and CHANGELOG.md (got version {body['version']!r})")
+check(f"## {body['version'].replace('PT-V', '')}" in body["markdown"],
+      "...with an entry for the version actually running, which is what makes it worth showing")
+
+# The update history and the copies kept aside, which the Updates screen
+# reads. These are an admin's business, not an operator's.
+check(client.get("/api/updates/history").status_code == 403,
+      "an operator cannot read this PC's update history")
+check(client.get("/api/updates/restore-points").status_code == 403,
+      "...nor what has been kept aside to go back to")
+
+client.post("/api/auth/logout", headers=CSRF)
+client.post("/api/auth/login", json={"username": "manager", "pin": "admin123"}, headers=CSRF)
+hist = client.get("/api/updates/history")
+check(hist.status_code == 200 and isinstance(hist.json(), list),
+      f"an admin reads it as a list, empty or not (got {hist.status_code})")
+points = client.get("/api/updates/restore-points")
+check(points.status_code == 200 and isinstance(points.json(), list),
+      f"...and the restore points the same way (got {points.status_code})")
+
 client.post("/api/auth/logout", headers=CSRF)
 check(client.get("/api/drill", params={"lot": "LOT-D1"}).status_code == 401, "anonymous is refused")
+check(client.get("/api/updates/changelog").status_code == 401, "...and so is reading the notes")
+check(client.get("/api/updates/history").status_code == 401, "...and the update history")
 
 print("\n" + "=" * 66)
 if FAILS:

@@ -4,6 +4,7 @@ import { checklistApi } from '../api/checklist'
 import { referenceApi } from '../api/reference'
 import { useToast } from '../toast/ToastProvider'
 import { ScreenSweep } from '../tv/PrintBuild'
+import { motionOff } from '../shell/motion'
 import { fl } from '../theme'
 
 const input = `${fl.input} py-3 text-base font-normal text-[var(--fl-ink)]`
@@ -256,11 +257,11 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
 
       <div className={panel}>
         <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 2: Final Verification</p>
-        <label className="mb-2 flex items-center gap-2 text-sm text-[var(--fl-body)]">
+        <label className={`mb-2 flex items-center gap-2 text-sm transition-colors ${qrChecked ? 'text-emerald-300' : 'text-[var(--fl-body)]'}`}>
           <input type="checkbox" checked={qrChecked} onChange={(e) => setQrChecked(e.target.checked)} />
           I have scanned the daily station QR code and submitted the external checksheet.
         </label>
-        <label className="mb-2 flex items-center gap-2 text-sm text-[var(--fl-body)]">
+        <label className={`mb-2 flex items-center gap-2 text-sm transition-colors ${materialsChecked ? 'text-emerald-300' : 'text-[var(--fl-body)]'}`}>
           <input type="checkbox" checked={materialsChecked} onChange={(e) => setMaterialsChecked(e.target.checked)} />
           {isPacker
             ? 'I have verified all labels, boxes, and necessary materials are staged for my pack-out run.'
@@ -271,7 +272,9 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
           disabled={!qrChecked || !materialsChecked || !cleanlinessDone || submitMutation.isPending}
           onClick={() => submitMutation.mutate()}
         >
-          🔓 Submit Validation & Unlock Terminal
+          <span className="inline-block" style={qrChecked && materialsChecked && cleanlinessDone && !motionOff()
+            ? { animation: 'fl-unlock 700ms cubic-bezier(0.22,0.61,0.36,1) both' } : undefined}>🔓</span>
+          {' '}Submit Validation &amp; Unlock Terminal
         </button>
         {submitMutation.isError && (
           <p className="mt-2 text-sm text-red-400">{(submitMutation.error as Error).message}</p>

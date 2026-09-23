@@ -31,6 +31,25 @@ class ShiftSummaryOut(BaseModel):
     by_cartridge: list[CartridgePoint] = []
 
 
+class MilestoneTier(BaseModel):
+    at: int
+    label: str
+    emoji: str
+
+
+class CareerOut(BaseModel):
+    """What somebody has poured since they started here, and the ladder of
+    milestones that total sits on (see milestones.py)."""
+    operator_name: str
+    units_lifetime: int
+    units_today: int
+    current: MilestoneTier | None
+    next: MilestoneTier | None
+    pct: float
+    remaining: int
+    tiers: list[MilestoneTier]
+
+
 class MonthlyRecapOut(BaseModel):
     has_data: bool
     month_label: str  # e.g. "September"

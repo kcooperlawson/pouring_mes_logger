@@ -48,6 +48,23 @@ class UpdateSourceRequest(BaseModel):
     token: str | None = None   # None leaves whatever is already set alone
 
 
+class UpdateAttempt(BaseModel):
+    """One line out of updates/history.jsonl - what this PC actually went
+    through, successes and failures alike."""
+    at: str = ""
+    from_version: str = ""
+    to_version: str = ""
+    ok: bool = False
+    detail: str = ""
+
+
+class RestorePoint(BaseModel):
+    """A copy-aside taken before an update, still sitting in rollback\."""
+    name: str
+    version: str = ""
+    at: str = ""
+
+
 class AvailableUpdate(BaseModel):
     version: str
     notes: str = ""

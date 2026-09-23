@@ -123,13 +123,23 @@ def _get_pg_bin(binary_name: str) -> str:
     # Portable mode (run_mes_portable.bat / api/portable_launcher.py) never
     # installs a system PostgreSQL at all - it runs on the pgserver package's
     # own bundled binaries instead, in a folder neither PATH nor the
-    # Program Files scan below would ever find. Try that next: pgserver
-    # exposes its bundled bin\ directory as POSTGRES_BIN_PATH, the same
-    # binaries api/portable_launcher.py already trusts to run this exact
-    # database (see its own pgserver.pg_ctl(...) call).
+    # Program Files scan below would ever find.
+    #
+    # pgserver.POSTGRES_BIN_PATH looks like the obvious way to find that
+    # folder, and used to be what this called - but that name lives in
+    # pgserver's private _commands submodule, and _commands.__all__ leaves it
+    # out of `from ._commands import *`, so pgserver (top level) never actually
+    # has it. That AttributeError was being swallowed right here, silently
+    # skipping this whole branch on every portable install - which is exactly
+    # the PC this branch exists for, so it always failed on the machines that
+    # needed it and never on a dev box with a real Postgres to fall back to.
+    # Built from pgserver.__file__ instead: "pginstall/bin" next to the
+    # package itself is pgserver's own on-disk layout, not a name it has to
+    # remember to keep exporting.
     try:
         import pgserver
-        candidate = os.path.join(pgserver.POSTGRES_BIN_PATH, exe_name)
+        candidate = os.path.join(os.path.dirname(os.path.abspath(pgserver.__file__)),
+                                 "pginstall", "bin", exe_name)
         if os.path.isfile(candidate):
             return candidate
     except Exception:
@@ -222,11 +232,52 @@ def _get_db_connection_params():
 
 
 def create_database_backup() -> str:
+    """Unchanged for every existing caller (run_scheduled_backup(),
+    _migration_helper.py, preflight.py, setup/apply_update.py's own backup
+    step) - still just filename-or-None. Delegates to
+    create_database_backup_detailed() so there is one real implementation,
+    not two that can drift apart."""
+    filename, _detail = create_database_backup_detailed()
+    return filename
+
+
+def create_database_backup_detailed() -> tuple:
+    """Same backup create_database_backup() has always taken, but also
+    returns WHY it failed - (filename, None) on success, (None, detail) on
+    failure. utils.create_database_backup() (above) is the thin wrapper
+    every other caller keeps using unchanged; api/routers/admin.py's own
+    backup button is the one caller that has a person watching in real
+    time, on a PC that may have no terminal or log file they can actually
+    get to (a plant PC, reached over the network from a phone) - it's the
+    one place a plain "it failed" isn't good enough, and a truncated
+    generic message ("Check pg_dump path.") sends someone hunting for a
+    log file that person may have no way to open.
+    """
     filename = f"mes_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.sql"
     params = _get_db_connection_params()
     if not params or not params["dbname"]:
-        logger.error("create_database_backup() aborted: DB_URL is missing or unparseable")
-        return None
+        detail = ("no database connection could be resolved - DB_URL in .env is "
+                  "missing/unparseable, and there is no pgdata\\ portable database "
+                  "either")
+        logger.error(f"create_database_backup() aborted: {detail}")
+        return None, detail
+
+    pg_dump_path = _get_pg_bin("pg_dump")
+    if not os.path.isfile(pg_dump_path):
+        # _get_pg_bin() already tried PG_BIN_DIR, PATH, the pgserver-bundled
+        # copy, and (on Windows) a Program Files scan - none of them found a
+        # real file, so pg_dump_path here is just its own last-resort bare
+        # name. Running it anyway would just be a bare, unhelpful WinError 2
+        # a few lines down; this says exactly what was checked instead.
+        detail = (
+            f"pg_dump was not found on this PC (looked for {pg_dump_path!r} via "
+            f"PG_BIN_DIR in .env, PATH, the bundled portable database, and a "
+            f"Program Files scan). If this PC runs the portable/bundled "
+            f"database, its venv\\ may be missing pgserver or have it "
+            f"installed incompletely."
+        )
+        logger.error(f"create_database_backup() aborted: {detail}")
+        return None, detail
 
     env = os.environ.copy()
     # Prefer the password embedded in DB_URL (the actual connection Home.py
@@ -236,7 +287,7 @@ def create_database_backup() -> str:
 
     try:
         subprocess.run(
-            [_get_pg_bin("pg_dump"), "-U", params["user"], "-h", params["host"], "-p", params["port"],
+            [pg_dump_path, "-U", params["user"], "-h", params["host"], "-p", params["port"],
              "-d", params["dbname"],
              # --clean + --if-exists: the dump includes "DROP TABLE IF EXISTS ..."
              # before every CREATE TABLE, so restoring onto a target database
@@ -250,16 +301,18 @@ def create_database_backup() -> str:
         # Beside the dump, what was in the database when it was taken - so a
         # restore on another machine can be checked rather than assumed.
         write_backup_manifest(filename)
-        return filename
+        return filename, None
     except subprocess.CalledProcessError as e:
         # capture_output=True above means e.stderr actually has pg_dump's real
         # complaint (wrong password, host unreachable, permission denied,
         # ...) instead of this just failing with no explanation anywhere.
-        logger.error(f"create_database_backup() failed: pg_dump exited {e.returncode}. stderr: {e.stderr.strip()}")
-        return None
-    except Exception:
+        detail = f"pg_dump exited {e.returncode}: {e.stderr.strip()[-400:]}"
+        logger.error(f"create_database_backup() failed: {detail}")
+        return None, detail
+    except Exception as exc:
+        detail = f"{type(exc).__name__}: {exc}"
         logger.exception("create_database_backup() failed unexpectedly")
-        return None
+        return None, detail
 
 MANIFEST_SUFFIX = ".manifest.json"
 

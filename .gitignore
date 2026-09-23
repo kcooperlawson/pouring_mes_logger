@@ -76,3 +76,11 @@ Claude outputs/
 
 # built update packages - shipped by hand or the update server, not git
 dist/
+
+# Belong to this machine, never to the project: whole-project copies-aside
+# taken before an update (each one is the entire app, easily gigabytes over
+# time), and this PC's own update history/queue. setup/apply_update.py's own
+# NEVER_TOUCH_DIRS already refuses to let a release write into either.
+rollback/
+updates/*
+!updates/README.txt

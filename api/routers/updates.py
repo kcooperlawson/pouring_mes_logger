@@ -18,14 +18,17 @@ Three routes:
                             that holds dev/update_signing_private.pem and a
                             GITHUB_RELEASE_TOKEN - see dev/update_publish.py)
 """
+import json
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
 
 from api import update_check
-from api.deps import require_admin_console, require_role
+from api.deps import get_current_user, require_admin_console, require_role
 from api.schemas.updates import (ApplyUpdateOut, ApplyVersionRequest, AvailableUpdate,
+                                 RestorePoint, UpdateAttempt,
                                  PublishUpdateOut, PublishUpdateRequest, UpdateSourceOut,
                                  UpdateSourceRequest, UpdateStatusOut)
 
@@ -34,6 +37,35 @@ sys.path.insert(0, str(ROOT / "setup"))
 sys.path.insert(0, str(ROOT / "dev"))
 
 router = APIRouter(prefix="/updates", tags=["updates"])
+
+
+@router.get("/changelog")
+def changelog(user: dict = Depends(get_current_user)) -> dict:
+    """What changed, in the words the release was written up in.
+
+    Read from CHANGELOG.md on disk rather than a copy pasted into the app, so
+    the PC always shows the notes for the version it is actually running -
+    the file ships inside every update package alongside the code it
+    describes, and cannot drift from it.
+
+    Any signed-in person can read it. It is the same text that goes out with
+    the release; there is nothing in it to keep from an operator, and "what
+    changed this morning" is a fair question from anybody standing at a
+    station that looks different than it did yesterday.
+    """
+    root = Path(__file__).resolve().parent.parent.parent
+    path = root / "CHANGELOG.md"
+    version = ""
+    try:
+        version = (root / "VERSION").read_text(encoding="utf-8").strip()
+    except OSError:
+        pass
+    try:
+        return {"version": version, "markdown": path.read_text(encoding="utf-8")}
+    except OSError:
+        # A missing changelog is a thin install, not a broken one - say so
+        # instead of 500ing a screen somebody opened out of curiosity.
+        return {"version": version, "markdown": ""}
 
 
 @router.get("/status", response_model=UpdateStatusOut)
@@ -58,6 +90,56 @@ def set_source(body: UpdateSourceRequest, user: dict = Depends(require_admin_con
         raise HTTPException(status_code=400, detail=str(exc))
     except OSError as exc:
         raise HTTPException(status_code=500, detail=f"could not write .env ({exc})")
+
+
+@router.get("/history", response_model=list[UpdateAttempt])
+def history(user: dict = Depends(require_admin_console)) -> list:
+    """What this PC has been through, newest first.
+
+    Written by setup/apply_update.py itself, one line per attempt, so a
+    failure that rolled itself back is on the list beside the installs that
+    worked. A screen that only shows what is available cannot answer "what
+    happened this morning".
+    """
+    path = ROOT / "updates" / "history.jsonl"
+    out = []
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except ValueError:
+                continue
+            out.append(UpdateAttempt(
+                at=str(row.get("at", "")), from_version=str(row.get("from") or ""),
+                to_version=str(row.get("to") or ""), ok=bool(row.get("ok")),
+                detail=str(row.get("detail", ""))))
+    except OSError:
+        return []
+    return list(reversed(out))[:50]
+
+
+@router.get("/restore-points", response_model=list[RestorePoint])
+def restore_points(user: dict = Depends(require_admin_console)) -> list:
+    """The copies taken aside before each update, newest first. Applying an
+    older release is the normal way back; these are what is left if even that
+    cannot be done, and knowing they exist is half of trusting the button."""
+    folder = ROOT / "rollback"
+    out = []
+    try:
+        entries = sorted(folder.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)
+    except OSError:
+        return []
+    for entry in entries:
+        if not entry.is_dir():
+            continue
+        version = entry.name.split("_")[0]
+        out.append(RestorePoint(
+            name=entry.name, version=version,
+            at=datetime.fromtimestamp(entry.stat().st_mtime).isoformat(timespec="seconds")))
+    return out[:20]
 
 
 @router.get("/available", response_model=list[AvailableUpdate])

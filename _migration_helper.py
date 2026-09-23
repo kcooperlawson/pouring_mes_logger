@@ -217,6 +217,48 @@ def cmd_verify_restore(filename: str):
     return 0
 
 
+
+def cmd_schema_back(target: str):
+    """Put the SCHEMA back to where an older release expects it.
+
+    Run before an older version's files are written, while the newer code
+    (and therefore the newer migration scripts) is still in place. That
+    order matters: the older release has never heard of the revisions added
+    after it, so once its files are in place nothing on the PC can reverse
+    them, and its own start-up dies on "Can't locate revision".
+
+    Two outcomes, in order of preference:
+      downgraded - every migration between here and there had a working
+                   downgrade(), so the schema really is back.
+      stamped    - one of them did not, so the schema is left as it is and
+                   the version table is set to what the older release
+                   expects. Extra columns and tables stay behind. That is
+                   harmless to the older code, which simply never selects
+                   them, and it is the difference between a PC that boots
+                   and a PC that does not.
+
+    Either way the backup taken one step earlier is the real way out.
+    """
+    from alembic import command
+    from alembic.config import Config
+
+    cfg = Config("alembic.ini")
+    try:
+        command.downgrade(cfg, target)
+        print(f"SCHEMA_BACK_OK:downgraded to {target}")
+        return 0
+    except Exception as exc:
+        first = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+        print(f"SCHEMA_BACK_NOTE:downgrade refused ({first[:160]})")
+    try:
+        command.stamp(cfg, target)
+        print(f"SCHEMA_BACK_OK:stamped at {target}")
+        return 0
+    except Exception as exc:
+        first = str(exc).strip().splitlines()[0] if str(exc).strip() else exc.__class__.__name__
+        print(f"SCHEMA_BACK_FAILED:{first[:200]}")
+        return 1
+
 if __name__ == "__main__":
     command = sys.argv[1] if len(sys.argv) > 1 else ""
     if command == "backup":
@@ -238,6 +280,11 @@ if __name__ == "__main__":
             print("VERIFY_SKIPPED: no filename given")
             sys.exit(0)
         sys.exit(cmd_verify_restore(sys.argv[2]))
+    elif command == "schema_back":
+        if len(sys.argv) < 3:
+            print("SCHEMA_BACK_FAILED: no target revision given")
+            sys.exit(1)
+        sys.exit(cmd_schema_back(sys.argv[2]))
     elif command == "check_dump_compat":
         if len(sys.argv) < 3:
             print("DUMP_COMPAT_UNKNOWN: no filename given")

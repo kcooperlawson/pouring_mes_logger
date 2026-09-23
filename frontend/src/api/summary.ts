@@ -39,7 +39,27 @@ export interface MonthlyRecap {
   mismatches: number
 }
 
+export interface MilestoneTier {
+  at: number
+  label: string
+  emoji: string
+}
+
+export interface Career {
+  operator_name: string
+  units_lifetime: number
+  units_today: number
+  current: MilestoneTier | null
+  next: MilestoneTier | null
+  /** How far through the gap between the tier held and the next one. */
+  pct: number
+  remaining: number
+  tiers: MilestoneTier[]
+}
+
 export const summaryApi = {
+  career: (asOperator?: string) =>
+    api.get<Career>(asOperator ? `/summary/career?${new URLSearchParams({ as_operator: asOperator })}` : '/summary/career'),
   today: (asOperator?: string) =>
     api.get<ShiftSummary>(asOperator ? `/summary/today?${new URLSearchParams({ as_operator: asOperator })}` : '/summary/today'),
   monthly: () => api.get<MonthlyRecap>('/summary/monthly'),

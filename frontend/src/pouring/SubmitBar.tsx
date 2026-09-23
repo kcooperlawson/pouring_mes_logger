@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motionOff } from '../shell/motion'
 import { fl } from '../theme'
 
 interface UndoState {
@@ -92,8 +93,21 @@ export function SubmitBar({
         </p>
       )}
 
-      <button className={btn} disabled={!canSubmit || isSubmitting} onClick={onSubmit}>
-        {isSubmitting ? 'Submitting…' : '🚀 SUBMIT POURING LOG'}
+      {/* While the request is in flight the button fills like a cartridge
+          rather than showing a spinner - it is the same wait either way, but
+          this one looks like the thing being waited for. The fill is purely
+          a progress-shaped animation, not a real percentage: nothing here
+          knows how far along the server is, and pretending to would be a
+          lie that stalls at 90%. */}
+      <button className={`${btn} relative overflow-hidden`} disabled={!canSubmit || isSubmitting} onClick={onSubmit}>
+        {isSubmitting && !motionOff() && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-0 left-0 bg-white/25"
+            style={{ animation: 'fl-submit-fill 1100ms cubic-bezier(0.33,0.9,0.5,1) infinite' }}
+          />
+        )}
+        <span className="relative">{isSubmitting ? 'Submitting…' : '🚀 SUBMIT POURING LOG'}</span>
       </button>
     </div>
   )

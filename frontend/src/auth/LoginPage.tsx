@@ -8,9 +8,9 @@ import { IosInstallHint } from '../pwa/IosInstallHint'
 import { LaserSweep } from '../tv/PrintBuild'
 import { useAuth } from './AuthProvider'
 
-const inputCls = 'w-full rounded border border-[#334155] bg-[#0F172A] px-3 py-2.5 text-sm text-[#00D2FF] placeholder:text-[#475569] focus:border-[#00D2FF] focus:outline-none focus:ring-2 focus:ring-[#00D2FF]/20'
+const inputCls = 'w-full rounded-lg border border-[#334155] bg-[#0F172A]/80 px-3 py-3 text-base text-[#00D2FF] placeholder:text-[#475569] focus:border-[#00D2FF] focus:outline-none focus:ring-2 focus:ring-[#00D2FF]/25'
 const labelCls = 'mb-1 block text-[0.68rem] font-extrabold uppercase tracking-wider text-[#94A3B8]'
-const primaryBtn = 'w-full rounded bg-[#FF4B4B] py-3 text-sm font-extrabold uppercase tracking-wide text-white shadow transition hover:bg-[#ff6b6b] disabled:opacity-40'
+const primaryBtn = 'relative w-full overflow-hidden rounded-lg bg-[#FF4B4B] py-3.5 text-sm font-extrabold uppercase tracking-wide text-white shadow-lg shadow-[#FF4B4B]/20 transition hover:bg-[#ff6b6b] hover:shadow-[#FF4B4B]/35 disabled:opacity-40'
 
 type Tab = 'signin' | 'register'
 
@@ -43,7 +43,11 @@ function SignInForm() {
       )}
 
       <button type="submit" disabled={isLoggingIn} className={primaryBtn}>
-        {isLoggingIn ? 'Signing in…' : 'Initialize Session'}
+        {isLoggingIn && (
+          <span aria-hidden="true" className="absolute inset-y-0 left-0 bg-white/25"
+                style={{ animation: 'fl-submit-fill 1100ms cubic-bezier(0.33,0.9,0.5,1) infinite' }} />
+        )}
+        <span className="relative">{isLoggingIn ? 'Signing in…' : 'Initialize Session'}</span>
       </button>
     </form>
   )
@@ -136,8 +140,30 @@ export function LoginPage() {
   const { lead: titleLead, tail: titleTail, sub: titleSub } = brandTitle(simpleMode)
 
   return (
-    <div className="flex min-h-svh items-center justify-center bg-[#0F172A] px-4 py-8">
-      <div className="w-full max-w-md">
+    // The first thing anybody sees each morning, on a terminal bolted to a
+    // bench. A flat slab of navy is where it started; the glow and the grid
+    // cost nothing and make the machine look switched on.
+    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[#0B1220] px-4 py-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'radial-gradient(circle at 50% 0%, rgba(0,210,255,0.16), transparent 55%), radial-gradient(circle at 50% 100%, rgba(255,75,75,0.10), transparent 45%)',
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.15]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(148,163,184,0.25) 1px, transparent 1px), linear-gradient(90deg, rgba(148,163,184,0.25) 1px, transparent 1px)',
+          backgroundSize: '48px 48px',
+          maskImage: 'radial-gradient(circle at 50% 40%, black, transparent 70%)',
+          WebkitMaskImage: 'radial-gradient(circle at 50% 40%, black, transparent 70%)',
+        }}
+      />
+      <div className="relative w-full max-w-md">
         <LaserSweep imageSrc="/form_printer.png" heightPx={132} />
 
         <div className="mb-6 text-center">
@@ -152,7 +178,7 @@ export function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-lg border border-[#334155] bg-[#1E293B] p-6 shadow-[0_4px_10px_rgba(0,0,0,0.3)]">
+        <div className="rounded-2xl border border-[#334155]/80 bg-[#1E293B]/80 p-6 shadow-[0_18px_40px_rgba(0,0,0,0.45)] backdrop-blur">
           <div className="mb-5 flex gap-4 border-b border-[#334155]">
             <button
               onClick={() => setTab('signin')}

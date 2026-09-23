@@ -13,8 +13,10 @@ import pandas as pd
 from fastapi import APIRouter, Depends
 
 import crud
+import milestones
 from api.deps import get_current_user, resolve_operator_name
-from api.schemas.summary import CartridgePoint, HourlyPoint, MonthlyRecapOut, ResinPoint, ShiftSummaryOut
+from api.schemas.summary import (CareerOut, CartridgePoint, HourlyPoint, MilestoneTier, MonthlyRecapOut,
+                                 ResinPoint, ShiftSummaryOut)
 
 router = APIRouter(prefix="/summary", tags=["summary"])
 
@@ -25,6 +27,30 @@ def _ordinal(n: int) -> str:
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
     return f"{n}{suffix}"
+
+
+@router.get("/career", response_model=CareerOut)
+def career(as_operator: str | None = None, user: dict = Depends(get_current_user)):
+    """Lifetime units and the milestone ladder. Always the caller's own (or
+    the operator a manager is standing in for) - a badge is a personal thing
+    and there is no reading of somebody else's here."""
+    who = resolve_operator_name(user, as_operator)
+    lifetime = crud.operator_lifetime_units(who)
+    today_d = date.today()
+    df_today = crud.get_production_logs_df(start_date=today_d, end_date=today_d, operator=who)
+    if not df_today.empty:
+        df_today = df_today[df_today["log_type"] == "Hourly Bottle Count"]
+    units_today = int(df_today["bottles_filled"].sum()) if not df_today.empty else 0
+
+    state = milestones.progress(lifetime)
+    to_tier = lambda t: MilestoneTier(**t) if t else None  # noqa: E731
+    return CareerOut(
+        operator_name=who, units_lifetime=lifetime, units_today=units_today,
+        current=to_tier(milestones.as_dict(state["current"])),
+        next=to_tier(milestones.as_dict(state["next"])),
+        pct=state["pct"], remaining=state["remaining"],
+        tiers=[MilestoneTier(at=at, label=label, emoji=emoji) for at, label, emoji in milestones.TIERS],
+    )
 
 
 @router.get("/today", response_model=ShiftSummaryOut)

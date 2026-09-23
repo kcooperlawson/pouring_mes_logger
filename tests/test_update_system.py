@@ -246,11 +246,17 @@ try:
           f"an older release is listed as well, below the newer one (got {versions})")
     older_row = next(e for e in listed if e["version"] == "PT-V0.99")
     check(older_row["newer"] is False, "...and is marked as not newer, so the page offers it as going back")
+    # The version rule itself, with the "this checkout builds releases" guard
+    # lifted - that guard is checked on its own further down.
+    import os as _os
+    _os.environ["MES_ALLOW_SELF_UPDATE"] = "1"
     try:
         update_check.apply_version("PT-V0.99")
         refused_downgrade = False
     except update_check.CheckError as exc:
         refused_downgrade = "not older" in str(exc)
+    finally:
+        _os.environ.pop("MES_ALLOW_SELF_UPDATE", None)
     check(refused_downgrade, "going back is refused unless it is asked for deliberately")
 
     # Pointing this PC somewhere else, the way the Updates tab does.
@@ -337,6 +343,104 @@ check("utils.py" in bootstrap.ALLOWED and "setup/apply_update.py" in bootstrap.A
       "it does replace the updater's own files, which is its whole job")
 check(all(name.split("/")[0] not in ("api", "frontend", "crud.py") for name in bootstrap.ALLOWED),
       "and nothing of the application itself - it cannot install a release")
+
+
+# --- going back to an older release ----------------------------------------
+# The thing that was broken: the files went back, then the older release's own
+# start-up hit a database stamped at a migration it has never heard of, the
+# boot check failed, and the whole apply rolled forward again. Nothing could
+# be reverted. The schema has to be walked back FIRST, while the newer code
+# that owns those migrations is still on disk.
+check(hasattr(apply_update, "package_schema_head"),
+      "the applier can read which migration revision a package expects")
+
+older, older_manifest = make_update.build_release(notes="an older one", out_dir=scratch_dist)
+with zipfile.ZipFile(older) as zf:
+    head = apply_update.package_schema_head(zf, older_manifest)
+check(head is not None,
+      f"a real package's own migration head is found inside it (got {head!r})")
+
+
+class _FakeZip:
+    def __init__(self, bodies):
+        self.bodies = bodies
+
+    def read(self, name):
+        return self.bodies[name].encode()
+
+
+bodies = {
+    "files/migrations/versions/0001_one.py": 'revision = "0001"\ndown_revision = None\n',
+    "files/migrations/versions/0002_two.py": 'revision = "0002"\ndown_revision = "0001"\n',
+    "files/migrations/versions/0003_three.py": 'revision = "0003"\ndown_revision = "0002"\n',
+}
+fake_manifest = {"files": [{"path": name.replace("files/", "")} for name in bodies]}
+check(apply_update.package_schema_head(_FakeZip(bodies), fake_manifest) == "0003",
+      "the head of a chain is the revision nothing else builds on, not the highest filename")
+check(apply_update.package_schema_head(_FakeZip({}), {"files": []}) is None,
+      "a package carrying no migrations asks for nothing rather than guessing")
+
+# Two applies at once would write two different releases over each other.
+lock_root = pathlib.Path(tempfile.mkdtemp(prefix="mes_lock_"))
+with apply_update.ApplyLock(str(lock_root)) as first:
+    check(first.taken, "the first apply takes the lock")
+    with apply_update.ApplyLock(str(lock_root)) as second:
+        check(not second.taken, "a second apply on the same PC is refused while one is running")
+with apply_update.ApplyLock(str(lock_root)) as after:
+    check(after.taken, "and the lock is released when the first one finishes")
+
+room_ok, room_detail = apply_update.enough_room(str(ROOT), str(older))
+check(room_ok and "MB" in room_detail,
+      f"free space is measured before anything is written (got {room_detail})")
+
+hist_root = pathlib.Path(tempfile.mkdtemp(prefix="mes_hist_"))
+apply_update.record_history(str(hist_root), {"to": "PT-V1.00", "from": "PT-V2.00",
+                                             "ok": False, "detail": "went wrong"})
+apply_update.record_history(str(hist_root), {"to": "PT-V2.00", "from": "PT-V1.00",
+                                             "ok": True, "detail": "installed"})
+lines = (hist_root / "updates" / "history.jsonl").read_text(encoding="utf-8").strip().splitlines()
+check(len(lines) == 2 and '"ok": true' in lines[1],
+      "every attempt is written down, the failures as well as the ones that worked")
+
+keep_root = pathlib.Path(tempfile.mkdtemp(prefix="mes_keep_"))
+(keep_root / "rollback").mkdir()
+for i in range(8):
+    (keep_root / "rollback" / ("copy_%d" % i)).mkdir()
+apply_update.prune_rollbacks(str(keep_root), keep=5)
+check(len(list((keep_root / "rollback").iterdir())) == 5,
+      "old whole-project rollback copies are cleared, so they cannot fill the disk")
+
+
+
+# --- a developer's own copy does not install releases over itself ----------
+# Learned the hard way. This project's working tree was reverted to an older
+# release by a button pressed in a browser pointed at a development server,
+# because that server runs out of the project folder like any other PC. A
+# plant PC has neither .git nor a dev folder, so the two are easy to tell
+# apart, and the machine that builds releases has no business installing one.
+_was = os.environ.pop("MES_ALLOW_SELF_UPDATE", None)
+try:
+    refused = ""
+    try:
+        update_check.apply_version("PT-V0.01", allow_older=True)
+    except update_check.CheckError as exc:
+        refused = str(exc)
+    check("builds releases" in refused,
+          f"applying a release onto the checkout that builds them is refused (got {refused[:80]!r})")
+
+    os.environ["MES_ALLOW_SELF_UPDATE"] = "1"
+    lifted = ""
+    try:
+        update_check.apply_version("PT-V0.01", allow_older=True)
+    except update_check.CheckError as exc:
+        lifted = str(exc)
+    check("builds releases" not in lifted,
+          "...and the escape hatch for testing the updater on purpose still exists")
+finally:
+    os.environ.pop("MES_ALLOW_SELF_UPDATE", None)
+    if _was is not None:
+        os.environ["MES_ALLOW_SELF_UPDATE"] = _was
+
 
 print("\n" + "=" * 66)
 if FAILS:

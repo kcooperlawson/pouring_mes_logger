@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { summaryApi } from '../api/summary'
 import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
 import { fl } from '../theme'
+import { BadgeWall } from './BadgeWall'
 import { Drill } from '../drill/DrillContext'
 
 
@@ -54,6 +55,8 @@ export function SummaryTab() {
           Hide
         </button>
       </div>
+
+      <BadgeWall />
 
       {!data ? null : !data.has_logs_today ? (
         <p className={`${fl.card} text-center text-sm ${fl.muted}`}>

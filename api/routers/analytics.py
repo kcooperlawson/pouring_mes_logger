@@ -19,7 +19,7 @@ import fill_weight
 import pace
 from api.deps import require_ability
 from api.schemas.analytics import (AnalyticsKpis, AnalyticsOverviewOut, DowntimeReason,
-                                   FillWeightOut, HeatmapCell, LiveTicker, PumpDeviation,
+                                   FillWeightOut, HeatmapCell, LiveTicker, OperatorAccuracy,
                                    ResinOutput, TrendPoint, WeightReading)
 from resin_palette import resin_color_map, stored_color_map
 
@@ -135,7 +135,7 @@ def overview(user: dict = Depends(require_ability("view_analytics"))):
     fw = pour_df[pour_df["check_weight_g"].notna()].copy() if "check_weight_g" in pour_df.columns else pd.DataFrame()
     if fw.empty:
         fill_weight_out = FillWeightOut(has_readings=False, samples=0, in_band_pct="0%", mean_deviation=0.0,
-                                        kg_above_target=0.0, scatter=[], by_pump=[], worst_pump_note=None)
+                                        kg_above_target=0.0, scatter=[], by_operator=[], accuracy_note=None)
     else:
         fw["weight_deviation_g"] = pd.to_numeric(fw["weight_deviation_g"], errors="coerce")
         fw = fw[fw["weight_deviation_g"].notna()]
@@ -154,25 +154,79 @@ def overview(user: dict = Depends(require_ability("view_analytics"))):
             for _, row in fw.sort_values("timestamp").iterrows()
         ]
 
-        by_pump_df = (fw.groupby("pump_station")["weight_deviation_g"].agg(["mean", "count"]).reset_index()
-                     .sort_values("mean", ascending=False))
-        by_pump = [PumpDeviation(pump_station=row["pump_station"], mean_deviation=round(float(row["mean"]), 2),
-                                 count=int(row["count"]))
-                  for _, row in by_pump_df.iterrows()]
+        # How close each person's readings land to target. Sorted most
+        # accurate first, so the list reads as a scoreboard rather than as a
+        # list of suspects - and by distance from target in either direction,
+        # because alternating heavy and light is not accuracy even though it
+        # averages to zero.
+        fw["abs_deviation_g"] = fw["weight_deviation_g"].abs()
 
-        worst_note = None
-        if by_pump:
-            worst = by_pump[0]
-            if worst.mean_deviation > 0.5:
-                worst_note = (f"{worst.pump_station} is averaging {worst.mean_deviation:+.1f} g against target "
-                             f"across {worst.count} readings. Every gram above target is resin out of the door "
-                             f"on every cartridge that pump fills.")
+        # Each pump's own habit, so a person is judged against the equipment
+        # they were standing at rather than against the plant. The median, not
+        # the mean, so one 40 g typo doesn't redefine the pump. Only pumps that
+        # more than one person has weighed on can have a baseline: one built
+        # from a single operator's readings just says that operator is average.
+        readers_per_pump = fw.groupby("pump_station")["operator_name"].nunique()
+        pump_median = fw.groupby("pump_station")["weight_deviation_g"].median()
+        fw["comparable"] = fw["pump_station"].map(readers_per_pump).fillna(0) >= 2
+        fw["vs_baseline_g"] = fw["weight_deviation_g"] - fw["pump_station"].map(pump_median)
+
+        by_operator = []
+        for name, group in fw.groupby("operator_name"):
+            judged_n = int(group["weight_status"].isin(["in", "over", "under"]).sum())
+            shared = group[group["comparable"]]
+            by_operator.append(OperatorAccuracy(
+                operator_name=str(name),
+                mean_deviation=round(float(group["weight_deviation_g"].mean()), 2),
+                mean_abs_deviation=round(float(group["abs_deviation_g"].mean()), 2),
+                in_band_pct=fill_weight.band_percent(int((group["weight_status"] == "in").sum()), judged_n),
+                count=int(len(group)),
+                vs_baseline=round(float(shared["vs_baseline_g"].mean()), 2) if len(shared) else None,
+                vs_baseline_abs=round(float(shared["vs_baseline_g"].abs().mean()), 2) if len(shared) else None,
+                comparable_count=int(len(shared)),
+            ))
+        # Ranked on the baseline-adjusted figure where there is one, since that
+        # is the fair comparison; anyone who has only ever weighed on a pump
+        # nobody else has weighed on sorts after, on their raw figure, rather
+        # than being silently ranked against a different question.
+        by_operator.sort(key=lambda o: (o.vs_baseline_abs is None,
+                                        o.vs_baseline_abs if o.vs_baseline_abs is not None else o.mean_abs_deviation))
+
+        # Enough readings that the number means something. One person's two
+        # readings being 9 g out is a coincidence; twenty of them is a habit.
+        accuracy_note = None
+        ENOUGH = 5
+        settled = [o for o in by_operator
+                   if o.comparable_count >= ENOUGH and o.vs_baseline_abs is not None]
+        if len(settled) >= 2:
+            # The comparison people actually want is between each other on the
+            # same equipment, not against the midpoint: two operators on one
+            # pump sit an equal distance either side of its median by
+            # definition, and that is not "the same as each other".
+            heaviest = max(settled, key=lambda o: o.vs_baseline)
+            lightest = min(settled, key=lambda o: o.vs_baseline)
+            spread = heaviest.vs_baseline - lightest.vs_baseline
+            if spread >= 2.0:
+                accuracy_note = (
+                    f"On the same pumps, {heaviest.operator_name} fills {spread:.1f} g heavier than "
+                    f"{lightest.operator_name} - {heaviest.vs_baseline:+.1f} g against the pump's usual across "
+                    f"{heaviest.comparable_count} readings, versus {lightest.vs_baseline:+.1f} g across "
+                    f"{lightest.comparable_count}. That gap is technique rather than the pump, and it is the one "
+                    f"worth a conversation.")
+            else:
+                accuracy_note = ("Once each pump's own habit is taken out, everybody is filling about the same. "
+                                 "Any difference left in the raw figures is the equipment, not the people.")
+        elif by_operator:
+            accuracy_note = (f"Not enough readings on shared pumps yet to compare people fairly - {ENOUGH} each "
+                             f"on a pump somebody else has also weighed on is about where these numbers settle. "
+                             f"The raw figures below still say who is heavy or light, but a pump that runs heavy "
+                             f"makes everybody on it read heavy.")
 
         fill_weight_out = FillWeightOut(
             has_readings=True, samples=summary["samples"],
             in_band_pct=fill_weight.band_percent(in_band, judged),
             mean_deviation=summary["mean_deviation"], kg_above_target=summary["kg"],
-            scatter=scatter, by_pump=by_pump, worst_pump_note=worst_note,
+            scatter=scatter, by_operator=by_operator, accuracy_note=accuracy_note,
         )
 
     return AnalyticsOverviewOut(

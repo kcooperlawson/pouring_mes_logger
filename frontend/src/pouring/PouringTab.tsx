@@ -8,6 +8,7 @@ import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
 import { enqueue, isConnectivityError } from '../offline/queue'
 import { playLogged } from '../sound/chimes'
 import { celebrate } from '../shell/Celebrate'
+import { flyToRing } from '../shell/motion'
 import { ShiftProgress } from './ShiftProgress'
 import { useToast } from '../toast/ToastProvider'
 import { ChangeoverBanner } from './ChangeoverBanner'
@@ -17,6 +18,33 @@ import { SubmitBar } from './SubmitBar'
 import { fl } from '../theme'
 
 const select = `${fl.select} py-3 text-base`
+
+// The form is three steps and always has been - station and material, the lot
+// check, then the count - but they were three identical headings in one long
+// column, so the screen read as a single wall of fields and nothing showed
+// how far through it you were. A step is a card with a numbered chip that
+// ticks when it is satisfied: the same fields, with the shape of the job
+// visible in them.
+function Step({
+  n, title, done, children, hint,
+}: { n: number; title: string; done?: boolean; children: React.ReactNode; hint?: string }) {
+  return (
+    <section className={`${fl.card} ${done ? 'border-emerald-700/50' : ''}`}>
+      <div className="mb-2 flex items-center gap-2">
+        <span
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold transition ${
+            done ? 'bg-emerald-500 text-white' : 'bg-[var(--fl-accent-wash)] text-[var(--fl-accent-2)]'
+          }`}
+        >
+          {done ? '✓' : n}
+        </span>
+        <h3 className="text-sm font-bold text-[var(--fl-ink)]">{title}</h3>
+        {hint && <span className={`ml-auto text-xs ${fl.muted}`}>{hint}</span>}
+      </div>
+      {children}
+    </section>
+  )
+}
 const label = `mb-1 block ${fl.label}`
 const textarea = `${fl.input} py-2 text-base font-normal text-[var(--fl-ink)]`
 
@@ -149,6 +177,10 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
       // does, not against the raw number: 60 bottles is a great hour on an
       // old pump and a slow one on a new one.
       const logged = isBulk ? bulk.containers : bottlesFilled
+      // The number they typed goes to the ring that counts it, so the total
+      // moving reads as this pour landing rather than as a second figure
+      // changing on its own.
+      flyToRing(document.querySelector('[data-fl-count-field]'), `+${logged.toLocaleString()}`)
       const mark = benchmarkQuery.data
       const beatsRecord = !!mark && mark.samples > 0 && logged > mark.best
       celebrate({
@@ -224,7 +256,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
           because that is the one thing nobody should ever be handed. */}
       {lastEntryQuery.data?.found && (
         <button
-          className={`${fl.btnSecondary} self-start`}
+          className={`${fl.btnSecondary} w-full justify-center py-2.5 text-sm sm:w-auto sm:self-start`}
           onClick={() => {
             const last = lastEntryQuery.data
             setStation(last.pump_station || station)
@@ -239,9 +271,8 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
           ↩️ Same as last hour ({lastEntryQuery.data.pump_station} · {lastEntryQuery.data.resin_type})
         </button>
       )}
-      <h3 className="text-sm font-semibold text-[#CBD5E1]">
-        1. Station & Material Setup
-      </h3>
+      <Step n={1} title="Station & material" done={!!(station && resin && cartCode)}
+            hint={station && resin && cartCode ? undefined : 'pick all three'}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label className={label}>Pump Station</label>
@@ -273,7 +304,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
       </div>
       {weightSpec && (
         <p
-          className="inline-block w-fit rounded-md border px-2 py-0.5 text-xs font-semibold"
+          className="mt-2 inline-block w-fit rounded-md border px-2 py-0.5 text-xs font-semibold"
           style={{ backgroundColor: weightSpec.color.bg, color: weightSpec.color.fg, borderColor: weightSpec.color.border }}
         >
           {weightSpec.resin_name} · target {weightSpec.target_g}g
@@ -281,20 +312,20 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
       )}
 
       {station && resin && !isOffTank && (
-        <ChangeoverBanner station={station} resin={resin} shift={shift} pourTick={pourTick} />
+        <div className="mt-2">
+          <ChangeoverBanner station={station} resin={resin} shift={shift} pourTick={pourTick} />
+        </div>
       )}
       {isOffTank && (
-        <p className={`text-sm ${fl.muted}`}>
+        <p className={`mt-2 text-sm ${fl.muted}`}>
           🛢️ No tank on this one — it came out of a drum.
         </p>
       )}
+      </Step>
 
       {station && resin && cartCode && (
         <>
-          <hr className={fl.divider} />
-          <h3 className="text-sm font-semibold text-[#CBD5E1]">
-            2. Lot Verification
-          </h3>
+          <Step n={2} title="Lot check" done={gateOk} hint={gateOk ? undefined : 'read the container'}>
           <LotVerificationGate
             station={station}
             resin={resin}
@@ -306,8 +337,9 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
               setGateBlockers(blockers)
             }}
           />
+          </Step>
 
-          <hr className={fl.divider} />
+          <Step n={3} title="What you poured" done={(isBulk ? bulk.containers : bottlesFilled) > 0}>
           <ProductionOutputFields
             station={station}
             resin={resin}
@@ -326,8 +358,8 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
             weightSpec={weightSpec}
           />
 
-          <div>
-            <label className={label}>Process Observations / Notes</label>
+          <div className="mt-3">
+            <label className={label}>Process observations / notes</label>
             <textarea
               className={textarea}
               rows={2}
@@ -336,6 +368,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+          </Step>
 
           {result && (
             <div className={`${fl.card} text-sm`}>
@@ -351,6 +384,11 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
             </p>
           )}
 
+          {/* Sticky, because the count is typed at the top of this card and
+              the button was a scroll away on a phone - and this is the one
+              control on the screen that has to be reachable the moment the
+              number is in. */}
+          <div className="sticky bottom-0 -mx-1 border-t border-[var(--fl-border)] bg-[var(--fl-ground)]/95 px-1 pb-1 pt-2 backdrop-blur">
           <SubmitBar
             canSubmit={canSubmit}
             blockers={gateBlockers}
@@ -362,6 +400,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
             onUndo={() => undo && undoMutation.mutate(undo.logId)}
             isUndoing={undoMutation.isPending}
           />
+          </div>
         </>
       )}
     </div>

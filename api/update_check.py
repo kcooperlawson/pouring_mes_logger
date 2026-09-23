@@ -315,6 +315,29 @@ def _headers(accept: str = "application/vnd.github+json") -> dict:
     return headers
 
 
+def refuse_on_a_development_checkout() -> None:
+    """A developer's own copy must never install a release over itself.
+
+    Learned the hard way: this project's working tree was reverted to an
+    older release by a button pressed in a browser pointed at a development
+    server, because that server runs out of the project folder like any other
+    PC. A plant PC has no .git and no dev\\ - it only has what a package
+    ships - so the two are easy to tell apart, and the one that builds
+    releases has no business installing them.
+
+    MES_ALLOW_SELF_UPDATE=1 in .env is there for testing the updater against
+    a real checkout on purpose. dev/simulate_rollback.py does not need it: it
+    builds a throwaway PC and never touches this one.
+    """
+    if os.getenv("MES_ALLOW_SELF_UPDATE", "").strip() == "1":
+        return
+    if (ROOT / ".git").exists() and (ROOT / "dev").is_dir():
+        raise CheckError(
+            "this copy of the project builds releases, it does not install them - "
+            "applying one here would overwrite the working tree with a shipped "
+            "release (set MES_ALLOW_SELF_UPDATE=1 in .env if that is really what you want)")
+
+
 def current_version() -> str:
     try:
         return (ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -473,6 +496,7 @@ def apply_version(version: str, allow_older: bool = False) -> dict:
     """Installs one named version - what the Updates tab's per-row button
     asks for. Same pipeline as apply_latest; the only difference is which
     package it fetches."""
+    refuse_on_a_development_checkout()
     release = next((r for r in _all_releases() if r["tag_name"] == version), None)
     if release is None:
         raise CheckError(f"{version} isn't on the update source any more")
@@ -509,6 +533,7 @@ def apply_latest(repo: str | None = None) -> dict:
     backup, verify-boots) and still restores the previous version
     automatically if any of them fail.
     """
+    refuse_on_a_development_checkout()
     release = latest_release(repo)
     if release is None:
         raise CheckError("no update is available to apply")

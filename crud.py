@@ -1920,6 +1920,25 @@ def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "")
     return rows
 
 
+def operator_lifetime_units(operator_name: str) -> int:
+    """Everything this person has ever poured, from the logs themselves.
+
+    No stored counter, so it cannot drift from the logs, and deleting a bad
+    log takes its units back out of the total the same way it takes them out
+    of every other figure in the app. Matched on the name as logged (and on
+    the account where one resolves), which is what every other per-operator
+    reader here does.
+    """
+    session = ScopedSession()
+    try:
+        total = session.query(func.coalesce(func.sum(ProductionLog.bottles_filled), 0)).filter(
+            func.lower(func.trim(ProductionLog.operator_name)) == str(operator_name or "").strip().lower(),
+            ProductionLog.log_type == "Hourly Bottle Count").scalar()
+        return int(total or 0)
+    finally:
+        session.close()
+
+
 def station_benchmark(station: str, days: int = 30) -> dict:
     """What a good hour looks like ON THIS PUMP, from this pump's own logs.
 

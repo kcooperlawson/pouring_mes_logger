@@ -41,7 +41,32 @@ export interface AvailableUpdate {
   newer: boolean
 }
 
+export interface ChangelogOut {
+  version: string
+  markdown: string
+}
+
+export interface UpdateAttempt {
+  at: string
+  from_version: string
+  to_version: string
+  ok: boolean
+  detail: string
+}
+
+export interface RestorePoint {
+  name: string
+  version: string
+  at: string
+}
+
 export const updatesApi = {
+  /** What this PC has actually been through, newest first - the failures too. */
+  history: () => api.get<UpdateAttempt[]>('/updates/history'),
+  restorePoints: () => api.get<RestorePoint[]>('/updates/restore-points'),
+  /** The release notes for the version this PC is actually running - read
+   *  from the CHANGELOG.md that shipped in the package with it. */
+  changelog: () => api.get<ChangelogOut>('/updates/changelog'),
   status: () => api.get<UpdateStatus>('/updates/status'),
   // Skips the server's 15-minute cache - the "Check now" button.
   checkNow: () => api.get<UpdateStatus>('/updates/status?force=true'),

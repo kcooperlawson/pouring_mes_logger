@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { pouringApi } from '../api/pouring'
 import { describe, judge } from './fillWeight'
+import { motionOff } from '../shell/motion'
 import { fl } from '../theme'
 
 export interface BulkState {
@@ -46,6 +47,15 @@ const label = `mb-1 block ${fl.label}`
 // the optional check weight. Bulk litres/blocking comes from the server
 // (bulk_pour.py needs a DB-backed vessel capacity lookup); the weight
 // judgement is pure arithmetic and runs client-side (see ./fillWeight.ts).
+/** Where a reading sits across the tolerance window, 0-100, clamped just
+ *  inside the ends so an out-of-band reading still shows as a needle pinned
+ *  at the edge rather than disappearing off it. */
+function needlePct(measured: number, spec: { min_g: number; max_g: number }): number {
+  const span = spec.max_g - spec.min_g
+  if (span <= 0) return 50
+  return Math.max(1, Math.min(99, ((measured - spec.min_g) / span) * 100))
+}
+
 export function ProductionOutputFields({
   station, resin, isBulk, bulk, onBulkChange, onBulkBlockedChange,
   bottlesFilled, onBottlesFilledChange, scrapEmpty, onScrapEmptyChange,
@@ -102,6 +112,7 @@ export function ProductionOutputFields({
               <label className={label}>Containers</label>
               <input
                 className={input}
+                data-fl-count-field
                 type="number"
                 min={1}
                 max={999}
@@ -150,6 +161,7 @@ export function ProductionOutputFields({
           <label className={label}>✅ Good Units / Containers Filled</label>
           <input
             className={input}
+            data-fl-count-field
             type="number"
             min={0}
             step={10}
@@ -184,6 +196,10 @@ export function ProductionOutputFields({
 
       <div>
         <label className={label}>⚖️ Check weight (g) — optional</label>
+        <p className={`mb-1 text-xs ${fl.muted}`}>
+          Weigh one filled cartridge and type what the scale says. It scores how close your fills are landing to
+          target — nothing here can stop a pour.
+        </p>
         <input
           className={input}
           type="number"
@@ -198,9 +214,38 @@ export function ProductionOutputFields({
           </p>
         )}
         {weightVerdict && (
-          <p className="mt-1 text-sm font-medium text-[#F8FAFC]">
-            {icon} {message}
-          </p>
+          <>
+            {/* Where this reading sits in the window, not just whether it
+                passed. The needle swings to the spot and settles, which is
+                what turns "in band" into "in band, but only just". */}
+            {weightSpec && weightSpec.min_g < weightSpec.max_g && (
+              <div className="mt-2">
+                <div className="relative h-6">
+                  <div className="absolute inset-x-0 top-2.5 h-1.5 rounded-full bg-[var(--fl-overlay-weak)]" />
+                  <div className="absolute top-2.5 h-1.5 rounded-full bg-emerald-500/40" style={{ left: '0%', right: '0%' }} />
+                  <div className="absolute top-1 h-4 w-px bg-[var(--fl-muted)]" style={{ left: '50%' }} title="Target" />
+                  <div
+                    className={`absolute top-0 h-6 w-1 rounded-full ${
+                      weightVerdict.status === 'in' ? 'bg-emerald-400' : 'bg-amber-400'
+                    }`}
+                    style={{
+                      left: `${needlePct(weightVerdict.measured, weightSpec)}%`,
+                      transform: 'translateX(-50%)',
+                      transition: motionOff() ? undefined : 'left 520ms cubic-bezier(0.22,0.61,0.36,1)',
+                    }}
+                  />
+                </div>
+                <div className={`flex justify-between text-[0.6rem] ${fl.muted}`}>
+                  <span>{weightSpec.min_g} g</span>
+                  <span>target {weightSpec.target_g} g</span>
+                  <span>{weightSpec.max_g} g</span>
+                </div>
+              </div>
+            )}
+            <p className="mt-1 text-sm font-medium text-[#F8FAFC]">
+              {icon} {message}
+            </p>
+          </>
         )}
       </div>
     </div>

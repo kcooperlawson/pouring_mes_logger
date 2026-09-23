@@ -7,6 +7,7 @@ import { PALETTES, paletteByName } from '../palettes'
 import { isMuted, setMuted } from '../sound/chimes'
 import { flourishesDisabled, setFlourishesDisabled } from './ThemeFlourish'
 import { useToast } from '../toast/ToastProvider'
+import { Changelog } from './Changelog'
 import { fl } from '../theme'
 
 const input = fl.input
@@ -16,12 +17,13 @@ const STATUS_COLOR: Record<string, string> = {
   Open: 'text-red-400', 'In Review': 'text-amber-400', Implemented: 'text-emerald-400', Dismissed: `text-[var(--fl-muted)]`,
 }
 
-type PanelTab = 'security' | 'avatar' | 'feedback'
+type PanelTab = 'security' | 'avatar' | 'feedback' | 'whatsnew'
 
 const TABS: { key: PanelTab; label: string }[] = [
   { key: 'security', label: '🔑 Security' },
   { key: 'avatar', label: '🎨 Theme & Avatar' },
   { key: 'feedback', label: '💡 Feedback' },
+  { key: 'whatsnew', label: '📜 What’s new' },
 ]
 
 function SecurityTab() {
@@ -321,6 +323,7 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
         {tab === 'security' && <SecurityTab />}
         {tab === 'avatar' && <AvatarTab />}
         {tab === 'feedback' && <FeedbackTab />}
+        {tab === 'whatsnew' && <Changelog />}
       </div>
     </div>
   )

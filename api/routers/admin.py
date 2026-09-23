@@ -290,9 +290,14 @@ def list_backups(user: dict = Depends(require_admin_console)):
 
 @router.post("/backups", response_model=CreateBackupOut)
 def create_backup(user: dict = Depends(require_admin_console)):
-    filename = utils.create_database_backup()
+    # The detailed variant (utils.py) - this button is the one place someone
+    # is actually watching in real time, often with no other way to reach
+    # this PC's own logs\ (a phone, over the network) - so the real pg_dump
+    # failure goes straight to the screen instead of a generic message that
+    # sends them looking for a log file they may have no way to open.
+    filename, detail = utils.create_database_backup_detailed()
     if not filename:
-        raise HTTPException(status_code=500, detail="Backup failed. Check pg_dump path.")
+        raise HTTPException(status_code=500, detail=f"Backup failed: {detail or 'unknown error'}")
     utils.prune_old_backups()
     return CreateBackupOut(filename=filename)
 

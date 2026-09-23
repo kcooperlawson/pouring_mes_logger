@@ -38,8 +38,15 @@ export const fl = {
   navItem:
     'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-semibold text-[var(--fl-body)] transition hover:bg-[var(--fl-overlay-weak)] hover:text-[var(--fl-ink)]',
 
-  tableHead: 'text-[0.68rem] font-extrabold uppercase tracking-wider text-[var(--fl-muted)]',
-  tableRow: 'border-t border-[var(--fl-border)]',
+  // Every table in the app renders through these two, so the header staying
+  // put while a long list scrolls, and a row lighting up under the pointer,
+  // are one change rather than six. The sticky header does nothing in a
+  // container that only scrolls sideways, which is most of them, and costs
+  // nothing there either.
+  tableHead:
+    'sticky top-0 z-10 bg-[var(--fl-surface)] text-[0.68rem] font-extrabold uppercase tracking-wider text-[var(--fl-muted)] [&_th]:py-1.5',
+  tableRow:
+    'border-t border-[var(--fl-border)] transition-colors odd:bg-[var(--fl-overlay-weak)]/30 hover:bg-[var(--fl-overlay-weak)]',
 
   divider: 'border-[var(--fl-border)]',
 }

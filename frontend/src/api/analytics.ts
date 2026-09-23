@@ -47,10 +47,20 @@ export interface WeightReading {
   status: string | null
 }
 
-export interface PumpDeviation {
-  pump_station: string
+export interface OperatorAccuracy {
+  operator_name: string
+  /** The bias: consistently heavy reads differently from consistently light. */
   mean_deviation: number
+  /** The accuracy: how far off a typical reading is, either direction. */
+  mean_abs_deviation: number
+  in_band_pct: string
   count: number
+  /** The same readings with that pump's own habit subtracted - positive is
+   *  heavier than everybody else on the same equipment. Null until a pump has
+   *  readings from more than one person. */
+  vs_baseline: number | null
+  vs_baseline_abs: number | null
+  comparable_count: number
 }
 
 export interface FillWeightOut {
@@ -60,8 +70,8 @@ export interface FillWeightOut {
   mean_deviation: number
   kg_above_target: number
   scatter: WeightReading[]
-  by_pump: PumpDeviation[]
-  worst_pump_note: string | null
+  by_operator: OperatorAccuracy[]
+  accuracy_note: string | null
 }
 
 export interface AnalyticsOverview {

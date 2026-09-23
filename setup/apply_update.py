@@ -45,6 +45,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 from datetime import datetime
 from pathlib import Path
@@ -141,6 +142,192 @@ def check_package(zf, manifest):
 
 
 # ------------------------------------------------------- the safety net -----
+def package_schema_head(zf, manifest):
+    """The migration revision an incoming package expects the database to be
+    on, read from the migration files inside the package itself.
+
+    A package carries its own migrations/versions/*.py. The head is the one
+    revision in that set that nothing else in the set lists as its
+    down_revision. Returns None when a package carries no migrations at all,
+    which just means there is nothing to line up.
+    """
+    revisions, parents = set(), set()
+    for entry in manifest.get("files", []):
+        name = str(entry.get("path", "")).replace("\\", "/")
+        if not (name.startswith("migrations/versions/") and name.endswith(".py")):
+            continue
+        try:
+            body = zf.read("files/" + name).decode("utf-8", "replace")
+        except Exception:
+            continue
+        found = re.search(r"^revision\s*(?::[^=]+)?=\s*['\"]([^'\"]+)['\"]", body, re.M)
+        parent = re.search(r"^down_revision\s*(?::[^=]+)?=\s*['\"]([^'\"]+)['\"]", body, re.M)
+        if found:
+            revisions.add(found.group(1))
+        if parent:
+            parents.add(parent.group(1))
+    heads = revisions - parents
+    if len(heads) == 1:
+        return heads.pop()
+    return None
+
+
+def schema_back(root, target_head):
+    """Ask the CURRENT code to put the schema back to what the older release
+    expects, before that release's files are written. (ok, message)."""
+    py = os.path.join(root, "venv", "Scripts", "python.exe")
+    if not os.path.isfile(py):
+        py = sys.executable
+    try:
+        out = subprocess.run([py, "_migration_helper.py", "schema_back", target_head],
+                             cwd=root, capture_output=True, text=True, timeout=900)
+    except Exception as exc:
+        return False, str(exc)[:200]
+    lines = [ln.strip() for ln in (out.stdout or "").splitlines() if ln.strip()]
+    note = next((ln.split(":", 1)[1] for ln in lines if ln.startswith("SCHEMA_BACK_NOTE:")), "")
+    for line in lines:
+        if line.startswith("SCHEMA_BACK_OK:"):
+            detail = line.split(":", 1)[1]
+            return True, (f"{detail} ({note})" if note else detail)
+        if line.startswith("SCHEMA_BACK_FAILED:"):
+            return False, line.split(":", 1)[1]
+    return False, (out.stderr or "no output").strip()[-300:]
+
+
+# Directories an update package owns outright, plus the root-level file types
+# it carries. Anything here that a package does NOT contain is a leftover from
+# some other release, which is only ever worth removing when going back.
+PRUNABLE_DIRS = ("api", "device_gateway", "migrations", "setup", "dev", "tests",
+                 "frontend/src", "frontend/public", "frontend/dist")
+PRUNABLE_ROOT_SUFFIXES = (".py", ".bat", ".ps1")
+
+
+def prune_to_package(root, manifest):
+    """Going back means going back. Remove files this release does not have.
+
+    Writing an older release's files over a newer one leaves everything the
+    newer release ADDED still sitting there, and some of those files are not
+    inert. Its migrations are the case that bit: the older code runs "upgrade
+    to head", finds the newer migration scripts still in migrations/versions,
+    and walks the schema straight back up to where it just came from. The
+    leftovers have to go for a revert to actually be one.
+
+    Only on the way back, and only inside the directories a release owns -
+    never uploads, backups, logs, the database, the .env, or anything else
+    that belongs to the machine.
+    """
+    keep = {str(entry["path"]).replace("\\", "/") for entry in manifest.get("files", [])}
+    removed = []
+    for base, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in NEVER_TOUCH_DIRS]
+        for name in names:
+            full = os.path.join(base, name)
+            rel = os.path.relpath(full, root).replace("\\", "/")
+            if rel in keep or name in NEVER_TOUCH:
+                continue
+            owned = rel.startswith(tuple(d + "/" for d in PRUNABLE_DIRS))
+            root_level = "/" not in rel and rel.endswith(PRUNABLE_ROOT_SUFFIXES)
+            if not (owned or root_level):
+                continue
+            try:
+                os.remove(full)
+                removed.append(rel)
+            except OSError:
+                pass
+    return removed
+
+
+def enough_room(root, package_path):
+    """A copy of the project plus the package unpacked, with room to spare.
+
+    Running out of disk half way through writing files is the one failure
+    that leaves a PC in a state neither version owns, and it is cheap to
+    refuse up front instead.
+    """
+    try:
+        need = os.path.getsize(package_path) * 3
+        for base, _dirs, files in os.walk(root):
+            if any(part in NEVER_TOUCH_DIRS for part in base.split(os.sep)):
+                continue
+            for f in files:
+                try:
+                    need += os.path.getsize(os.path.join(base, f))
+                except OSError:
+                    pass
+        free = shutil.disk_usage(root).free
+        return free > need, f"{free // (1024 ** 2)} MB free, about {need // (1024 ** 2)} MB needed"
+    except Exception as exc:
+        # Never block an update because the estimate itself failed.
+        return True, f"could not measure free space ({exc})"
+
+
+def prune_rollbacks(root, keep=5):
+    """Old copies-aside are a safety net, not an archive - each one is the
+    whole project. Keep the newest few and delete the rest."""
+    folder = os.path.join(root, "rollback")
+    try:
+        entries = sorted(
+            (os.path.join(folder, n) for n in os.listdir(folder)),
+            key=lambda p: os.path.getmtime(p), reverse=True)
+    except Exception:
+        return 0
+    removed = 0
+    for old in [e for e in entries if os.path.isdir(e)][keep:]:
+        try:
+            shutil.rmtree(old, ignore_errors=True)
+            removed += 1
+        except Exception:
+            pass
+    return removed
+
+
+def record_history(root, entry):
+    """One line per attempt, so the Updates screen can show what this PC has
+    actually been through rather than only what it is on now."""
+    try:
+        folder = os.path.join(root, "updates")
+        os.makedirs(folder, exist_ok=True)
+        entry = dict(entry)
+        entry.setdefault("at", datetime.now().isoformat(timespec="seconds"))
+        with open(os.path.join(folder, "history.jsonl"), "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(entry) + "\n")
+    except Exception:
+        pass
+
+
+class ApplyLock:
+    """Only one apply at a time. Two at once - a click plus a scheduled
+    check, or an impatient second click - would have them writing over each
+    other's files with two different releases."""
+
+    def __init__(self, root):
+        self.path = os.path.join(root, "updates", ".applying")
+        self.taken = False
+
+    def __enter__(self):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        try:
+            # Stale after an hour: a crashed apply must not lock the PC out
+            # of ever updating again.
+            if os.path.isfile(self.path) and time.time() - os.path.getmtime(self.path) > 3600:
+                os.remove(self.path)
+            fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            self.taken = True
+        except FileExistsError:
+            self.taken = False
+        return self
+
+    def __exit__(self, *exc):
+        if self.taken:
+            try:
+                os.remove(self.path)
+            except OSError:
+                pass
+        return False
+
+
 def take_backup(root=ROOT):
     """Ask the application for a database backup. (ok, message)."""
     py = os.path.join(root, "venv", "Scripts", "python.exe")
@@ -264,6 +451,17 @@ def verify(root, written):
 
 # ------------------------------------------------------------------- main --
 def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
+    with ApplyLock(root) as lock:
+        if not lock.taken:
+            say()
+            say(BAD + "another update is being applied on this PC right now.")
+            say("        Nothing has been changed. Wait for it to finish.")
+            say()
+            return 1
+        return _apply(package_path, root, assume_yes, allow_older)
+
+
+def _apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
     say()
     say("  ===================================================")
     say("   APPLY UPDATE")
@@ -341,7 +539,19 @@ def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
                 return 1
 
         say()
-        say("  [1/6] Database backup...")
+        say("  [1/7] Room to work...")
+        room_ok, room_detail = enough_room(root, package_path)
+        if not room_ok:
+            say(BAD + f"not enough free disk space ({room_detail}).")
+            say("        Nothing has been changed. An update that runs out of")
+            say("        space half way through is the one failure that leaves")
+            say("        a PC on neither version.")
+            record_history(root, {"to": target, "from": here, "ok": False,
+                                  "detail": f"not enough disk space ({room_detail})"})
+            return 1
+        say(OK, room_detail)
+
+        say("  [2/7] Database backup...")
         ok, detail = take_backup(root)
         if not ok:
             say(BAD + f"the backup failed ({detail}).")
@@ -350,7 +560,7 @@ def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
             return 1
         say(OK, detail)
 
-        say("  [2/6] Copying this version aside...")
+        say("  [3/7] Copying this version aside...")
         stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         snapshot = os.path.join(root, "rollback", f"{(here or 'unknown')}_{stamp}")
         try:
@@ -360,13 +570,46 @@ def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
             return 1
         say(OK, os.path.relpath(snapshot, root))
 
-        say("  [3/6] Writing files...")
+        say("  [4/7] Lining the database up...")
+        # Only on the way back. Going forward, the incoming release runs its
+        # own new migrations at the boot check in step 7, which is where a
+        # schema change has always been proved.
+        going_back = bool(allow_older and here and target
+                          and version_tuple(target) < version_tuple(here))
+        if not going_back:
+            say(OK, "nothing to do - the new version brings its own")
+        else:
+            wanted_head = package_schema_head(zf, manifest)
+            if not wanted_head:
+                say(OK, "that release carries no migrations of its own")
+            else:
+                # This has to happen while the NEWER code is still in place.
+                # Its migration scripts are the only thing on the PC that
+                # knows how to reverse its own changes, and they are about to
+                # be replaced by an older set that has never heard of them.
+                ok, detail = schema_back(root, wanted_head)
+                if not ok:
+                    say(BAD + f"could not put the database back to {wanted_head}: {detail}")
+                    say("        Nothing has been changed, and the backup from step 2")
+                    say("        is in backups\\. Restoring that backup onto this")
+                    say("        version is the way out.")
+                    record_history(root, {"to": target, "from": here, "ok": False,
+                                          "detail": f"schema could not go back: {detail}"})
+                    return 1
+                say(OK, detail)
+
+        say("  [5/7] Writing files...")
         written = write_files(zf, manifest, root)
         gone = remove_files(manifest, root)
+        # Only when going back. Forward, a file this package happens not to
+        # carry is simply a file that did not change.
+        stale = prune_to_package(root, manifest) if going_back else []
         clear_pycache(root)
-        say(OK, f"{len(written)} written" + (f", {len(gone)} removed" if gone else ""))
+        say(OK, f"{len(written)} written"
+                + (f", {len(gone)} removed" if gone else "")
+                + (f", {len(stale)} newer files cleared out" if stale else ""))
 
-    say("  [4/6] Packages...")
+    say("  [6/7] Packages...")
     ok, detail = install_packages(manifest, root)
     if not ok:
         say(BAD + "a package could not be installed:")
@@ -374,10 +617,12 @@ def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
         say("  Putting the previous version back...")
         restore_from(snapshot, root)
         say(OK, f"this PC is back on {read_version(root)}")
+        record_history(root, {"to": target, "from": here, "ok": False,
+                              "detail": f"a package could not be installed: {detail[:200]}"})
         return 1
     say(OK, detail)
 
-    say("  [5/6] Checking it actually runs...")
+    say("  [7/7] Checking it actually runs...")
     ok, detail = verify(root, written)
     if not ok:
         say(BAD + detail)
@@ -389,10 +634,12 @@ def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
         say("        the database backup from step 1 is in backups\\.")
         log_line(f"FAILED {os.path.basename(package_path)}: {detail.splitlines()[0]}",
                  root)
+        record_history(root, {"to": target, "from": here, "ok": False,
+                              "detail": detail.splitlines()[0][:200]})
         return 1
     say(OK, detail)
 
-    say("  [6/6] Filing the package...")
+    say("  Filing the package...")
     applied_dir = os.path.join(root, "updates", "applied")
     try:
         os.makedirs(applied_dir, exist_ok=True)
@@ -401,7 +648,10 @@ def apply(package_path, root=ROOT, assume_yes=False, allow_older=False):
         pass
     log_line(f"applied {os.path.basename(package_path)}: {here} -> {read_version(root)}",
              root)
-    say(OK, "moved to updates\\applied\\")
+    record_history(root, {"to": read_version(root), "from": here, "ok": True,
+                          "detail": "went back to this version" if allow_older else "installed"})
+    pruned = prune_rollbacks(root)
+    say(OK, "moved to updates\\applied\\" + (f", {pruned} old rollback copies cleared" if pruned else ""))
 
     say()
     say("  ===================================================")

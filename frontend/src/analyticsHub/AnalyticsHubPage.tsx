@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { analyticsApi, type DowntimeReason, type HeatmapCell, type PumpDeviation, type ResinOutput, type TrendPoint, type WeightReading } from '../api/analytics'
+import { analyticsApi, type DowntimeReason, type HeatmapCell, type OperatorAccuracy, type ResinOutput, type TrendPoint, type WeightReading } from '../api/analytics'
 import { fl } from '../theme'
 import { Drill } from '../drill/DrillContext'
 
@@ -208,27 +208,44 @@ function WeightScatter({ readings }: { readings: WeightReading[] }) {
   )
 }
 
-// Per-pump mean deviation, centred at zero - running heavy (orange, costs
-// resin) and running light (blue) get different colours on purpose.
-function PumpDeviationBars({ data }: { data: PumpDeviation[] }) {
+// How close each person's fill weights land to target. The bar is the bias -
+// heavy (orange, costs resin) to the right of centre, light (blue) to the
+// left - and the figure beside it is the accuracy: how far off a typical
+// reading is in either direction, which is what "+8 then -8" should read as
+// rather than a perfect zero.
+function OperatorAccuracyBars({ data }: { data: OperatorAccuracy[] }) {
   const maxAbs = Math.max(...data.map((d) => Math.abs(d.mean_deviation)), 1)
   return (
     <div className="flex flex-col gap-2">
-      {data.map((d) => {
+      {data.map((d, i) => {
         const over = d.mean_deviation > 0
         const widthPct = (Math.abs(d.mean_deviation) / maxAbs) * 50
         return (
-          <div key={d.pump_station} className="flex items-center gap-2 text-xs">
-            <span className={`w-28 shrink-0 truncate ${fl.muted}`}><Drill f={{ pump: d.pump_station }}>{d.pump_station}</Drill></span>
-            <div className="relative h-4 flex-1 overflow-hidden rounded bg-[#0F172A]">
+          <div key={d.operator_name} className="flex items-center gap-2 text-xs">
+            <span className={`w-28 shrink-0 truncate ${fl.muted}`}>
+              {i === 0 && data.length > 1 && <span title="Closest to their pumps' own baseline">🎯 </span>}
+              <Drill f={{ operator: d.operator_name }}>{d.operator_name}</Drill>
+            </span>
+            <div className="relative h-4 flex-1 overflow-hidden rounded bg-[#0F172A]" title={`${d.mean_deviation > 0 ? '+' : ''}${d.mean_deviation.toFixed(1)} g average bias`}>
               <div className="absolute inset-y-0 left-1/2 w-px bg-[#64748B]" />
               <div
                 className={`absolute inset-y-0 rounded ${over ? 'bg-[#EA580C]' : 'bg-[#38BDF8]'}`}
                 style={over ? { left: '50%', width: `${widthPct}%` } : { right: '50%', width: `${widthPct}%` }}
               />
             </div>
-            <span className="w-16 shrink-0 text-right font-medium text-white">
-              {d.mean_deviation > 0 ? '+' : ''}{d.mean_deviation.toFixed(1)}g
+            <span className="w-14 shrink-0 text-right font-medium text-white" title="How far off a typical reading is, either direction">
+              ±{d.mean_abs_deviation.toFixed(1)}g
+            </span>
+            <span
+              className={`w-16 shrink-0 text-right font-medium ${d.vs_baseline === null ? fl.muted : Math.abs(d.vs_baseline) >= 2 ? 'text-[#FBBF24]' : 'text-emerald-400'}`}
+              title={d.vs_baseline === null
+                ? 'Only weighed on pumps nobody else has weighed on - nothing to compare against'
+                : `${d.vs_baseline > 0 ? '+' : ''}${d.vs_baseline.toFixed(1)} g against the same pumps' usual, over ${d.comparable_count} readings`}
+            >
+              {d.vs_baseline === null ? '—' : `${d.vs_baseline > 0 ? '+' : ''}${d.vs_baseline.toFixed(1)}g`}
+            </span>
+            <span className={`w-20 shrink-0 text-right ${fl.muted}`}>
+              {d.in_band_pct} · {d.count}
             </span>
           </div>
         )
@@ -257,7 +274,9 @@ export function AnalyticsHubPage() {
   const pourArrow = kpis.pour_delta_pct >= 0 ? '▲' : '▼'
 
   return (
-    <div className="flex flex-col gap-4">
+    // Capped and centred like the cockpit and SCADA, so the manager screens
+    // share one page width instead of three.
+    <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className={fl.heading}>🌌 Nexus Analytics</h1>
         <span className="rounded-lg border border-[#A855F7]/30 bg-[#A855F7]/10 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#A78BFA]">
@@ -334,13 +353,13 @@ export function AnalyticsHubPage() {
       </div>
 
       <div className={card}>
-        <p className="mb-3 text-sm font-semibold text-white">⚖️ Fill weight</p>
+        <p className="mb-3 text-sm font-semibold text-white">⚖️ Fill weight accuracy — by operator</p>
         {!fill_weight.has_readings ? (
           <p className={`text-sm ${fl.muted}`}>
             No check weights recorded yet. The pouring form has an optional{' '}
-            <strong className="text-[#CBD5E1]">Check weight (g)</strong> box — one reading an hour from any pump is
-            enough to show where that pump is sitting in its tolerance window, and how much resin is being given
-            away above target.
+            <strong className="text-[#CBD5E1]">Check weight (g)</strong> box — one reading an hour is enough to
+            show how close each person's fills are landing to target, who is consistently heavy or light, and how
+            much resin that is costing.
           </p>
         ) : (
           <>
@@ -371,9 +390,17 @@ export function AnalyticsHubPage() {
                 <WeightScatter readings={fill_weight.scatter} />
               </div>
               <div>
-                <PumpDeviationBars data={fill_weight.by_pump} />
-                {fill_weight.worst_pump_note && (
-                  <p className={`mt-3 text-xs ${fl.muted}`}>{fill_weight.worst_pump_note}</p>
+                <OperatorAccuracyBars data={fill_weight.by_operator} />
+                <p className={`mt-2 text-[0.7rem] ${fl.muted}`}>
+                  Bar is the average bias against target (right of centre is heavy) and ± is how far off a typical
+                  reading is either way. <strong className="text-[#CBD5E1]">vs pump</strong> is the fair one: the
+                  same readings with each pump's own habit subtracted, so it says heavier or lighter than everybody
+                  else on that same equipment. It reads — until a pump has been weighed on by more than one person.
+                  Then the share in band and the number of readings. Clicking a name shows which pumps they came
+                  from.
+                </p>
+                {fill_weight.accuracy_note && (
+                  <p className={`mt-3 text-xs ${fl.muted}`}>{fill_weight.accuracy_note}</p>
                 )}
               </div>
             </div>
