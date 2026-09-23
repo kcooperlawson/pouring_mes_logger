@@ -152,6 +152,21 @@ body = r.json()
 check(body["date"] == TODAY, f"...for the day asked for (got {body['date']})")
 check(body["scope"] == "self", f"an operator sees their own row only (got {body['scope']})")
 
+# The startup checklist for New Pump #1 was already submitted earlier in
+# this file (checklist_at and start_audit_at both real), and nothing has
+# been poured on it yet. The end-of-shift photo must not be expected here -
+# a station with zero pours cannot be "the last pump worked", because
+# nothing has been worked yet. The bug this guards: the row that happened
+# to sort first became "last" by default the instant nothing had been
+# assigned yet, which meant every fresh shift showed the end-of-shift photo
+# as already outstanding before a single unit was poured.
+fresh = next(row for row in client.get(f"/api/checklist/compliance?on_date={TODAY}").json()["rows"]
+            if row["pump_station"] == "New Pump #1")
+check(fresh["poured"] == 0 and fresh["end_expected"] is False,
+      f"a checklist with no pours behind it does not expect an end-of-shift photo yet (got {fresh})")
+check(fresh["complete"] is True,
+      f"...so a shift that has only just started reads as complete, not as already behind (got {fresh})")
+
 crud.add_hourly_log(operator_name="Demo Operator", pump_station="New Pump #1", shift="Shift 1",
                     cartridge_type="V2", resin_type="Grey", lot_number="LOT-C1",
                     bottles=30, scrap_empty=0, scrap_filled=0)

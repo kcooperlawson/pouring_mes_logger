@@ -8,6 +8,21 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 4.24 — Tuesday, September 22, 2026
+**A real workflow, not just a pile of correct screens. Plus a genuine bug the redesign turned up.**
+
+Prompted by an operator asking a couple of times how to do the audits properly. Went looking for why, and found the actual cause: the same underlying check had three different names depending on which screen showed it. The startup checklist called it "Morning Cleanliness Check." The Audit tab's own dropdown called the exact same thing "Start Of Shift (Cleanliness Check)." The status table called it "Start photo." Nobody could be expected to know those were one fact, and the transfer and end-of-shift checks had nothing prompting them at all - they were just two more options in a dropdown that always defaulted back to the first one, whatever was actually still owed.
+
+**The Audit tab is rebuilt around "what do I still need to log," not a blank dropdown.** It reads the same compliance data the Checklist & Audit Status screen already shows managers, and turns it into three plain cards - Start-of-shift photo, Transfer photo, End-of-shift photo - each showing done-with-a-time or a "Log it" button, and only appearing when it's actually relevant to that pump. A spill report stays separate below, because it's something that happens, not a box to check every shift. The checklist gate's own Step 1 is renamed to match - "Start-of-shift photo," the same words everywhere it's shown - and now says plainly that it's the same thing the Audit tab tracks, not a second thing to go do.
+
+**A banner, visible on every tab, says what's still outstanding today** - not just on the Audit tab where it might not be noticed. "Pump 7 · End-of-shift photo," click it, and it opens straight into logging that exact one. The Audit tab picks up a small number badge with the same count. Both go quiet the moment nothing is outstanding.
+
+**Found while actually testing this, not by inspection: a real bug in the compliance logic.** Finishing the startup checklist with zero pours yet was making the end-of-shift photo show as already due - before a single unit had been poured. The "which pump was worked last" calculation picked whichever pump happened to sort first for an operator with no pours logged anywhere yet, instead of recognizing that a station nobody has poured on can't be "the last one worked." This wasn't just wrong in the new UI - it meant the Checklist & Audit Status screen managers already use was marking a shift that had only just started as behind before it had a chance to be. Fixed, and proven with a new test: a fresh checklist with no pours reads as complete, not as already outstanding.
+
+**Managers get an actual "what to check today" list, not just a menu.** The Manager Cockpit landing screen now opens with three live, reasoned items - startup checklists & audits outstanding, downtime & scrap today, and suggestions & crash reports waiting - each with a line on why it's worth looking at and a click straight into the right screen. This sits above the existing status tiles, which still show the raw numbers; this is the ordered procedure a new manager would otherwise have to be told about by whoever had the job before them.
+
+---
+
 ## 4.23 — Tuesday, September 22, 2026
 **Generating a backup on the portable database failed with "pg_dump was not found", every time.**
 

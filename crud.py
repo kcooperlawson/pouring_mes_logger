@@ -1894,15 +1894,27 @@ def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "")
         rows.append(entry)
     rows.sort(key=lambda r: (r["operator_name"], r["shift"], r["pump_station"]))
 
+    # Which pump was worked LAST - the one the end-of-shift photo belongs to.
+    # Only a row with an actual pour on it can be "last": a station that only
+    # has a startup checklist against it (poured on zero times so far today)
+    # hasn't been worked yet, let alone left, so it can't be the last one
+    # worked. Skipping rows with no first_pour_at here matters more than it
+    # looks - without it, the very first row seen for an operator became
+    # "last" by default the instant `current is None` (which is true before
+    # anything has been assigned), even when that row had never been poured
+    # on. That made the end-of-shift photo show as already due the moment
+    # someone finished their startup checklist, before they had poured a
+    # single unit.
     last_station = {}
     for row in rows:
+        if not row["first_pour_at"]:
+            continue
         key = (row["operator_name"], row["shift"])
         current = last_station.get(key)
-        if current is None or (row["first_pour_at"] and current["first_pour_at"]
-                               and row["first_pour_at"] > current["first_pour_at"]):
+        if current is None or row["first_pour_at"] > current["first_pour_at"]:
             last_station[key] = row
     for row in rows:
-        row["end_expected"] = last_station.get((row["operator_name"], row["shift"])) is row
+        row["end_expected"] = bool(row["first_pour_at"]) and last_station.get((row["operator_name"], row["shift"])) is row
         # Moving to a second pump is what a transfer check is for; the first
         # pump of a shift has nothing to transfer from.
         same = [r for r in rows if r["operator_name"] == row["operator_name"] and r["shift"] == row["shift"]]

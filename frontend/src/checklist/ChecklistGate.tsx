@@ -68,6 +68,12 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['checklist', 'status', effectiveStation, shift] })
     queryClient.invalidateQueries({ queryKey: ['checklist', 'vessel-options', effectiveStation] })
+    // The cleanliness step here writes the exact same record the Audit tab
+    // calls the "Start-of-shift photo" - without this, that tab (and the
+    // outstanding-checks banner) could keep showing it as not done for up to
+    // a minute after the gate just logged it, which is exactly the kind of
+    // disagreement between two screens that started this confusion.
+    queryClient.invalidateQueries({ queryKey: ['checklist', 'compliance'] })
   }
 
   const cleanlinessMutation = useMutation({
@@ -212,10 +218,12 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
 
       {!cleanlinessDone || reopened ? (
         <div className={panel}>
-          <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 1: Morning Cleanliness Check</p>
+          <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 1: Start-of-shift photo</p>
           {cleanlinessDone && (
             <p className="mb-2 text-xs text-emerald-400">
-              ✅ Already logged today — this logs a separate entry, e.g. for a second operator taking over this pump.
+              ✅ Already logged today — this is the same Start-of-shift photo the Audit tab tracks, so there is
+              nothing left to do for it there. Logging it again here makes a separate entry, e.g. for a second
+              operator taking over this pump.
             </p>
           )}
           <textarea
@@ -251,7 +259,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
         </div>
       ) : (
         <p className="text-sm text-emerald-400">
-          ✅ Step 1: Morning Cleanliness Check — LOGGED & COMPLETED
+          ✅ Step 1: Start-of-shift photo — logged
         </p>
       )}
 

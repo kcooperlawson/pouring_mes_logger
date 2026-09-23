@@ -18,7 +18,9 @@ import { ThemeFlourish, useFlourishVisible } from './shell/ThemeFlourish'
 import { hasAnyManagerAbility } from './ManagerShell'
 import { paletteByName } from './palettes'
 import { fl } from './theme'
-import { AuditTab } from './pouring/AuditTab'
+import { AuditTab, type AuditPreset } from './pouring/AuditTab'
+import { ChecksBanner } from './checklist/ChecksBanner'
+import { useMyChecks, type CheckKind } from './checklist/useMyChecks'
 import { DowntimeTab } from './pouring/DowntimeTab'
 import { NotesTab } from './pouring/NotesTab'
 import { PackingTab } from './pouring/PackingTab'
@@ -99,6 +101,21 @@ export function OperatorFormPage() {
   const [myStation, setMyStation] = useState('')
   const [showAccount, setShowAccount] = useState(false)
   const [debugAsOperator, setDebugAsOperator] = useState('')
+  // Set by the checks banner (or a card on the Audit tab itself) to jump
+  // straight into logging one specific outstanding check, instead of
+  // landing on the tab and having to work out which of four dropdown
+  // options is the one that's actually still needed.
+  const [auditPreset, setAuditPreset] = useState<AuditPreset | null>(null)
+  const jumpToCheck = (station: string, kind: CheckKind) => {
+    setAuditPreset({ station, kind })
+    setTab('audit')
+  }
+  // A manager/admin using this screen as themselves (not standing in for
+  // someone via Debug Mode) gets the whole plant's compliance scope from the
+  // API, not their own - "3 checks still needed" would mean the floor's, not
+  // theirs, so the banner and the tab badge stay off for that case.
+  const showMyChecks = !isManagement || !!debugAsOperator
+  const { outstanding: myOutstanding } = useMyChecks(showMyChecks)
 
   // Idempotent (see startOfflineQueue's own guard) - safe to call on every
   // mount rather than threading a "did this already happen" flag through
@@ -179,10 +196,17 @@ export function OperatorFormPage() {
             station={myStation}
             onStationChange={setMyStation}
           >
+            <ChecksBanner onJump={jumpToCheck} enabled={showMyChecks} />
+
             <div className={fl.tabStrip}>
               {tabs.map((t) => (
                 <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 ${tab === t.key ? fl.tabActive : fl.tabInactive}`}>
                   <t.icon size={14} className="shrink-0" strokeWidth={2.25} /> {t.label}
+                  {t.key === 'audit' && showMyChecks && myOutstanding.length > 0 && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
+                      {myOutstanding.length}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
@@ -193,7 +217,9 @@ export function OperatorFormPage() {
               {tab === 'pouring' && <PouringTab shift={user?.shift ?? 'Shift 1'} myStation={myStation} />}
               {tab === 'packing' && <PackingTab />}
               {tab === 'downtime' && <DowntimeTab myStation={myStation} />}
-              {tab === 'audit' && <AuditTab myStation={myStation} />}
+              {tab === 'audit' && (
+                <AuditTab myStation={myStation} preset={auditPreset} onConsumePreset={() => setAuditPreset(null)} />
+              )}
               {tab === 'notes' && <NotesTab />}
               {tab === 'summary' && <SummaryTab />}
             </div>
