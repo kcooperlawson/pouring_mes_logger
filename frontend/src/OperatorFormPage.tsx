@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  AlertTriangle, BarChart3, Camera, ClipboardList, FlaskConical, HelpCircle, Package, Radio,
+  AlertTriangle, BarChart3, Camera, FlaskConical, HelpCircle, Package, Radio,
   Settings, Wrench, type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -22,12 +22,11 @@ import { AuditTab, type AuditPreset } from './pouring/AuditTab'
 import { ChecksBanner } from './checklist/ChecksBanner'
 import { useMyChecks, type CheckKind } from './checklist/useMyChecks'
 import { DowntimeTab } from './pouring/DowntimeTab'
-import { NotesTab } from './pouring/NotesTab'
 import { PackingTab } from './pouring/PackingTab'
 import { PouringTab } from './pouring/PouringTab'
 import { SummaryTab } from './pouring/SummaryTab'
 
-type TabKey = 'pouring' | 'packing' | 'downtime' | 'audit' | 'notes' | 'summary'
+type TabKey = 'pouring' | 'packing' | 'downtime' | 'audit' | 'summary'
 
 // Visible on every tab, not just Pouring: a packing or downtime submit can
 // queue exactly the same way, and whoever is standing at this screen needs
@@ -94,7 +93,6 @@ export function OperatorFormPage() {
     isPacker ? { key: 'packing', label: 'Packing', icon: Package } : { key: 'pouring', label: 'Pouring', icon: FlaskConical },
     { key: 'downtime', label: 'Downtime', icon: AlertTriangle },
     { key: 'audit', label: 'Audit', icon: Camera },
-    { key: 'notes', label: 'Notes', icon: ClipboardList },
     { key: 'summary', label: 'Summary', icon: BarChart3 },
   ]
   const [tab, setTab] = useState<TabKey>(tabs[0].key)
@@ -220,7 +218,6 @@ export function OperatorFormPage() {
               {tab === 'audit' && (
                 <AuditTab myStation={myStation} preset={auditPreset} onConsumePreset={() => setAuditPreset(null)} />
               )}
-              {tab === 'notes' && <NotesTab />}
               {tab === 'summary' && <SummaryTab />}
             </div>
           </ChecklistGate>

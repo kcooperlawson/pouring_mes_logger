@@ -29,11 +29,10 @@ import { LotVerificationPage } from './lotVerification/LotVerificationPage'
 import { ReactorFleetPage } from './reactors/ReactorFleetPage'
 import { ResinCanvasPage } from './resinCanvas/ResinCanvasPage'
 import { RosterPage } from './roster/RosterPage'
-import { FloorCommsPage } from './scada/FloorCommsPage'
 import { ScadaPage } from './scada/ScadaPage'
 import { ScrapIntelPage } from './scrap/ScrapIntelPage'
 
-export type TabKey = 'cockpit' | 'scada' | 'reactors' | 'floor-comms' | 'cleanliness' | 'checks' | 'roster' | 'scrap-intel' | 'lot-verification' | 'batch-history' | 'historical' | 'resin-canvas' | 'assigned-runs' | 'log-management' | 'google-sync' | 'analytics' | 'admin' | 'devices'
+export type TabKey = 'cockpit' | 'scada' | 'reactors' | 'cleanliness' | 'checks' | 'roster' | 'scrap-intel' | 'lot-verification' | 'batch-history' | 'historical' | 'resin-canvas' | 'assigned-runs' | 'log-management' | 'google-sync' | 'analytics' | 'admin' | 'devices'
 
 // Which tab - top-level sidebar item, or launchpad card inside 'cockpit' -
 // a granted ability (IT Admin > Users, crud.ABILITIES) actually unlocks.
@@ -62,7 +61,6 @@ const TAB_ABILITY: Partial<Record<TabKey, string>> = {
   'batch-history': 'view_manager_cockpit',
   cleanliness: 'view_manager_cockpit',
   checks: 'view_manager_cockpit',
-  'floor-comms': 'view_manager_cockpit',
   'assigned-runs': 'view_manager_cockpit',
   'google-sync': 'export_data',
   roster: 'manage_people',
@@ -423,7 +421,6 @@ export function ManagerShell() {
           {tab === 'cleanliness' && <CleanlinessGalleryPage />}
           {tab === 'checks' && <CheckStatusPage />}
           {tab === 'roster' && <RosterPage />}
-          {tab === 'floor-comms' && <FloorCommsPage />}
           {tab === 'scrap-intel' && <ScrapIntelPage />}
           {tab === 'lot-verification' && <LotVerificationPage />}
           {tab === 'batch-history' && <BatchHistoryPage />}

@@ -119,7 +119,13 @@ export function AuditTab({
                     onLog={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.transfer, station: myStation })} />
           <CheckCard kind="end" at={myRow?.end_audit_at ?? null} expected={myRow?.end_expected ?? false}
                     onLog={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.end, station: myStation })} />
-          {myRow?.start_audit_at && !myRow?.transfer_expected && !myRow?.end_expected && (
+          {myRow?.brief && (
+            <p className={`text-sm ${fl.muted}`}>
+              ✅ Quick job on {myStation} - no photos needed. Keep going past 100 units here and it counts as a
+              move, and the transfer photo will show up.
+            </p>
+          )}
+          {!myRow?.brief && myRow?.start_audit_at && !myRow?.transfer_expected && !myRow?.end_expected && (
             <p className={`text-sm ${fl.muted}`}>
               ✅ Nothing outstanding on {myStation} right now. A transfer photo will show up here if you move to
               another pump, and the end-of-shift photo before you finish up.

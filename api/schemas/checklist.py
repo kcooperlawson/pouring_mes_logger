@@ -44,6 +44,9 @@ class ComplianceRow(BaseModel):
     start_expected: bool
     transfer_expected: bool
     end_expected: bool
+    # A quick job on a pump other than the one the shift began on (under
+    # crud.BRIEF_VISIT_UNITS units): no photos are expected for it.
+    brief: bool = False
     complete: bool
 
 

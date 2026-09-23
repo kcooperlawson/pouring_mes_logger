@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import {
-  Camera, ClipboardCheck, ClipboardList, Cloud, Compass, Droplets, FlaskConical,
+  Camera, ClipboardCheck, Cloud, Compass, Droplets, FlaskConical,
   LayoutDashboard, Lightbulb, Lock, PieChart, Scale, Settings, Shield, Target, Trash2, TrendingUp,
   Tv, Users, type LucideIcon,
 } from 'lucide-react'
@@ -365,10 +365,6 @@ export function ManagerCockpitHub({
         {canSee('roster') && (
           <LaunchCard label="Floor Staff Roster" icon={Users} onClick={() => onNavigate('roster')}
                       caption="Who is signed in, on what, right now." />
-        )}
-        {canSee('floor-comms') && (
-          <LaunchCard label="Notes from the Floor" icon={ClipboardList} onClick={() => onNavigate('floor-comms')}
-                      caption="Messages between the floor and this desk." />
         )}
         {isManagement && (
           <LaunchCard label="Floor Display (TV Mode)" icon={Tv} href="/tv"

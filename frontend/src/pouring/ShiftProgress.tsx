@@ -16,10 +16,10 @@ import { Drill } from '../drill/DrillContext'
 // a plant target, because there isn't a per-shift bottle target to read and a
 // made-up one would be worse than none.
 //
-// Under it is the thing that doesn't reset overnight: a career total and the
-// milestone it is climbing toward (milestones.py), all the way to a million.
-// A shift resets at midnight and a career never does, which is what makes the
-// second number worth watching for longer than a day.
+// Career badges (milestones.py) used to sit under the ring too. They were
+// louder than they were useful on the screen people pour from, so they live
+// at the bottom of the Summary tab now, folded away (BadgeWall). Crossing
+// one still gets a small, quiet note here - nothing more.
 
 // Today's ring steps in a size that suits the day being had. A pourer on the
 // new pumps can be past 3,000 by early afternoon, and a ring that ticked every
@@ -65,13 +65,10 @@ export function ShiftProgress() {
     staleTime: 10_000,
   })
   const career = careerQuery.data
-  const lifetime = career?.units_lifetime ?? 0
-  const lifetimeShown = useCountUp(lifetime, 900)
   const lastTier = useRef<number | null>(null)
 
-  // A career tier is the rarest thing that happens on this screen - the first
-  // hundred once ever, the million maybe never - so it gets its own, louder
-  // moment instead of sharing the per-pour one.
+  // A career tier still gets named when it's crossed, but quietly - no bigger
+  // than the per-pour moment, so it doesn't take over the pouring screen.
   useEffect(() => {
     const at = career?.current?.at ?? 0
     if (lastTier.current === null) {
@@ -80,15 +77,13 @@ export function ShiftProgress() {
     }
     if (at > lastTier.current) {
       lastTier.current = at
-      setTierPop((n) => n + 1)
-      celebrate({ strength: 3, label: `${career?.current?.emoji ?? '🏅'} ${career?.current?.label} — ${career?.current?.at.toLocaleString()} lifetime` })
+      celebrate({ strength: 1, label: `${career?.current?.emoji ?? '🏅'} ${career?.current?.label} — ${career?.current?.at.toLocaleString()} lifetime` })
     }
   }, [career?.current?.at, career?.current?.emoji, career?.current?.label])
 
   const units = query.data?.units ?? 0
   const shown = useCountUp(units)
   const [popped, setPopped] = useState(0)
-  const [tierPop, setTierPop] = useState(0)
   const lastMilestone = useRef<number | null>(null)
 
   useEffect(() => {
@@ -145,31 +140,6 @@ export function ShiftProgress() {
         <p className={`text-xs ${fl.muted}`}>
           {nextBadge - units} to {nextBadge} today
         </p>
-
-        {career && (
-          <div className="mt-2 border-t border-[var(--fl-border)] pt-2" key={tierPop}
-               style={tierPop ? { animation: 'fl-tier-pop 900ms cubic-bezier(0.22,0.61,0.36,1) both' } : undefined}>
-            <p className="flex flex-wrap items-baseline gap-x-2 text-xs">
-              <span className="font-semibold text-[var(--fl-ink)]">
-                {career.current ? `${career.current.emoji} ${career.current.label}` : 'No badge yet'}
-              </span>
-              <span className={fl.muted}>{lifetimeShown.toLocaleString()} poured all time</span>
-            </p>
-            {career.next && (
-              <>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--fl-overlay-weak)]">
-                  <div
-                    className="h-full rounded-full bg-[var(--fl-accent)]"
-                    style={{ width: `${career.pct}%`, transition: 'width 900ms cubic-bezier(0.22,0.61,0.36,1)' }}
-                  />
-                </div>
-                <p className={`mt-0.5 text-[0.7rem] ${fl.muted}`}>
-                  {career.remaining.toLocaleString()} to {career.next.emoji} {career.next.label}
-                </p>
-              </>
-            )}
-          </div>
-        )}
       </div>
     </div>
     </Drill>

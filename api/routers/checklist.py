@@ -188,7 +188,7 @@ def compliance(on_date: str = "", shift: str = "", user: dict = Depends(get_curr
             transfer_audit_at=_utc_iso(r["transfer_audit_at"]),
             end_audit_at=_utc_iso(r["end_audit_at"]),
             start_expected=r["start_expected"], transfer_expected=r["transfer_expected"],
-            end_expected=r["end_expected"],
+            end_expected=r["end_expected"], brief=r["brief"],
             complete=r["complete"],
         ) for r in rows],
     )

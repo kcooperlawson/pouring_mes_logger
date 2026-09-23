@@ -190,9 +190,25 @@ check(mine[0]["poured"] >= 1, "...showing it was actually poured on, which is wh
 # ignored by everybody.
 check(mine[0]["start_expected"] is True,
       f"the pump a shift began on does want its start-of-shift photo (got {mine[0]})")
+
+# A quick job on another pump - 19 bottles covering for somebody - is not a
+# move. It owes no transfer photo, no start photo, and must not drag the
+# end-of-shift photo off the pump they went straight back to.
+crud.add_hourly_log(operator_name="Demo Operator", pump_station="Helped-Out Pump", shift="Shift 1",
+                    cartridge_type="V2", resin_type="Grey", lot_number="LOT-C3",
+                    bottles=19, scrap_empty=0, scrap_filled=0)
+rows = client.get(f"/api/checklist/compliance?on_date={TODAY}").json()["rows"]
+helped = [row for row in rows if row["pump_station"] == "Helped-Out Pump"][0]
+check(helped["brief"] is True and not helped["transfer_expected"] and not helped["start_expected"]
+      and not helped["end_expected"],
+      f"a 19-unit job on another pump asks for no photos at all (got {helped})")
+home = [row for row in rows if row["pump_station"] == "New Pump #1"][0]
+check(home["end_expected"] is True and home["brief"] is False,
+      f"...and the end-of-shift photo stays on the pump actually worked (got {home})")
+
 crud.add_hourly_log(operator_name="Demo Operator", pump_station="Moved-To Pump", shift="Shift 1",
                     cartridge_type="V2", resin_type="Grey", lot_number="LOT-C2",
-                    bottles=30, scrap_empty=0, scrap_filled=0)
+                    bottles=150, scrap_empty=0, scrap_filled=0)
 rows = client.get(f"/api/checklist/compliance?on_date={TODAY}").json()["rows"]
 moved = [row for row in rows if row["pump_station"] == "Moved-To Pump"]
 check(len(moved) == 1, f"the pump they moved to appears too (got {[r['pump_station'] for r in rows]})")

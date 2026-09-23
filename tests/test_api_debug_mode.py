@@ -119,13 +119,6 @@ sasha_packing = crud.get_production_logs_df(operator="Sasha")
 sasha_packing = sasha_packing[sasha_packing["log_type"] == "Packing Count"]
 check(not sasha_packing.empty, "the packing count is also attributed to the impersonated operator")
 
-# --- notes: sent, and read back, as the impersonated operator --------------
-r = client.post("/api/notes", json={"message": "Testing debug mode", "as_operator": "Sasha"}, headers=CSRF)
-check(r.status_code == 200, f"manager can send a note in Debug Mode (got {r.status_code})")
-r = client.get("/api/notes", params={"as_operator": "Sasha"})
-check(r.status_code == 200 and any(n["message"] == "Testing debug mode" for n in r.json()),
-      "the note shows up under the impersonated operator's own note history")
-
 print("\n" + "=" * 66)
 if FAILS:
     print(f"{len(FAILS)} of {CHECKS} DEBUG MODE CHECKS FAILED:")

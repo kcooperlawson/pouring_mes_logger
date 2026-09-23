@@ -6,6 +6,29 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.27 — Wednesday, September 23, 2026
+### A quick job on another pump doesn't cost two photos any more.
+
+Found at work: I had to run 19 RPS bottles on another pump, five minutes of work. After I logged them the app wanted a transfer photo for that pump, and it had moved the end-of-shift photo over to it as well. Any pour on a second pump counted as moving to it, so that pump also became the last pump worked, and the end-of-shift photo goes to the last pump worked.
+
+Now anything under 100 units on a pump that isn't the one the shift started on is a quick job, not a move. It asks for no photos at all. It also can't become the last pump worked, so the end-of-shift photo stays on the pump that was actually worked all day. Go past 100 units and it counts as a real move again, and the transfer photo comes back. The pump a shift started on is never a quick job.
+
+The Audit tab says "Quick job on Pump X - no photos needed," and the Checks table marks that row as a quick job, so managers can see why nothing is owed there. The startup checklist for a new pump is unchanged. It's a safety check on the pump itself, and it already lets a clean station skip the photo.
+
+Tested with the exact case: 19 units on a second pump owes nothing, and the end-of-shift photo stays where it was. A real move of 150 units still asks for the transfer photo and takes the end-of-shift photo with it.
+
+### The badges step back.
+
+The career badge, lifetime total and progress bar are gone from under the shift ring on the pouring form. The ring for today is unchanged. The badge wall moved from the top of the Summary tab to the bottom, folded away under "Career badges." Crossing a new badge gets the same small pop as a normal pour now, not the big burst.
+
+### The Notes tab is gone. Feedback is the one place to write in.
+
+Nobody was using Notes, and it was one more tab on the operator form. There were two ways to send something to management, Notes and Feedback, and only Feedback was being read. So Notes is gone, and so is the manager screen that answered it, "Notes from the Floor," with its card on the Manager Cockpit. Feedback, in the account panel, is where anything for management goes now.
+
+Old notes are still in the database. Nothing was deleted, there is just no screen for them any more.
+
+---
+
 ## 3.26 — Tuesday, September 22, 2026
 ### Generating a backup on the portable database failed with "pg_dump was not found", every time.
 

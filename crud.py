@@ -1812,6 +1812,14 @@ AUDIT_START = "Start Of Shift (Cleanliness Check)"
 AUDIT_TRANSFER = "Station / Pump Transfer Check"
 AUDIT_END = "End Of Shift (Cleanliness Check)"
 
+# Below this many units, time on a pump that isn't the one the shift began on
+# is a quick job - covering a run of 19 bottles for somebody - not a move.
+# It asks for no transfer photo and never becomes "the last pump worked", so
+# five minutes elsewhere doesn't cost two photo audits and drag the
+# end-of-shift photo off the pump that was actually worked all day. Past it,
+# the pump is treated as a real move, and the photos come back.
+BRIEF_VISIT_UNITS = 100
+
 
 def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "") -> list:
     """Who has done their checks, and which ones are still outstanding.
@@ -1832,7 +1840,8 @@ def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "")
     session = ScopedSession()
     try:
         pours = session.query(ProductionLog.operator_name, ProductionLog.pump_station,
-                              ProductionLog.shift, ProductionLog.timestamp).filter(
+                              ProductionLog.shift, ProductionLog.timestamp,
+                              ProductionLog.bottles_filled).filter(
             ProductionLog.date == on_date,
             ProductionLog.log_type == "Hourly Bottle Count").all()
         checklists = session.query(DailyChecklist).filter(DailyChecklist.date == on_date).all()
@@ -1855,15 +1864,16 @@ def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "")
         key = (op or "", station or "", sh or "")
         if key not in pairs:
             pairs[key] = {"operator_name": key[0], "pump_station": key[1], "shift": key[2],
-                          "poured": 0, "first_pour_at": None, "checklist_at": None,
+                          "poured": 0, "units": 0, "first_pour_at": None, "checklist_at": None,
                           "start_audit_at": None, "transfer_audit_at": None, "end_audit_at": None}
         return pairs[key]
 
-    for op, station, sh, ts in pours:
+    for op, station, sh, ts, bottles in pours:
         if not matches(sh, op):
             continue
         entry = slot(op, station, sh)
         entry["poured"] += 1
+        entry["units"] += int(bottles or 0)
         if entry["first_pour_at"] is None or (ts and ts < entry["first_pour_at"]):
             entry["first_pour_at"] = ts
 
@@ -1905,9 +1915,27 @@ def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "")
     # on. That made the end-of-shift photo show as already due the moment
     # someone finished their startup checklist, before they had poured a
     # single unit.
-    last_station = {}
+    #
+    # The pump a shift began on is never a brief visit - it's where the
+    # start-of-shift photo lives. Any later pump with fewer than
+    # BRIEF_VISIT_UNITS on it is a quick job elsewhere: it owes no photos and
+    # can't be "last", so it can't pull the end-of-shift photo away from the
+    # pump the operator went straight back to.
+    earliest = {}
     for row in rows:
         if not row["first_pour_at"]:
+            continue
+        key = (row["operator_name"], row["shift"])
+        if key not in earliest or row["first_pour_at"] < earliest[key]:
+            earliest[key] = row["first_pour_at"]
+    for row in rows:
+        first = earliest.get((row["operator_name"], row["shift"]))
+        row["brief"] = bool(row["first_pour_at"] and first and row["first_pour_at"] > first
+                            and row["units"] < BRIEF_VISIT_UNITS)
+
+    last_station = {}
+    for row in rows:
+        if not row["first_pour_at"] or row["brief"]:
             continue
         key = (row["operator_name"], row["shift"])
         current = last_station.get(key)
@@ -1917,14 +1945,14 @@ def checklist_compliance(on_date=None, shift: str = "", operator_name: str = "")
         row["end_expected"] = bool(row["first_pour_at"]) and last_station.get((row["operator_name"], row["shift"])) is row
         # Moving to a second pump is what a transfer check is for; the first
         # pump of a shift has nothing to transfer from.
-        same = [r for r in rows if r["operator_name"] == row["operator_name"] and r["shift"] == row["shift"]]
-        earliest = min((r["first_pour_at"] for r in same if r["first_pour_at"]), default=None)
-        row["transfer_expected"] = bool(row["first_pour_at"] and earliest and row["first_pour_at"] > earliest)
+        first = earliest.get((row["operator_name"], row["shift"]))
+        row["transfer_expected"] = bool(not row["brief"] and row["first_pour_at"] and first
+                                        and row["first_pour_at"] > first)
         # The start-of-shift photo belongs to the pump the shift began on -
         # which is exactly the pump nothing was transferred from. Asking for
         # one on a pump somebody moved to at noon would mark a correctly run
         # shift as incomplete and teach everyone to ignore the column.
-        row["start_expected"] = not row["transfer_expected"]
+        row["start_expected"] = not row["transfer_expected"] and not row["brief"]
         row["complete"] = (row["checklist_at"] is not None
                            and (not row["start_expected"] or row["start_audit_at"] is not None)
                            and (not row["transfer_expected"] or row["transfer_audit_at"] is not None)
@@ -2535,44 +2563,6 @@ def delete_cleanliness_audit(audit_id: int) -> bool:
     for filename in orphaned:
         _remove_audit_photo(filename)
     return True
-
-def send_floor_message(operator_name: str, sender_name: str, message: str, is_manager: bool):
-    session = ScopedSession()
-    try:
-        session.add(FloorMessage(operator_name=operator_name, sender_name=sender_name, message=message,
-                                 is_manager_reply=1 if is_manager else 0,
-                                 operator_id=_resolve_user_id(session, operator_name),
-                                 sender_id=_resolve_user_id(session, sender_name)))
-        session.commit()
-    finally:
-        session.close()
-
-
-def get_chat_history_df(operator_name: str) -> pd.DataFrame:
-    session = ScopedSession()
-    try:
-        # Outer-joined against the sender's current avatar (by sender_id, the
-        # FK resolved at write time in send_floor_message) so the chat UI can
-        # show the real sender's profile picture instead of a generic icon.
-        # LEFT join so messages whose sender account was deleted, or logged
-        # before the FK backfill, still render (just with no avatar).
-        return pd.read_sql(
-            session.query(FloorMessage, User.avatar_filename.label("sender_avatar"))
-            .outerjoin(User, User.id == FloorMessage.sender_id)
-            .filter(FloorMessage.operator_name == operator_name)
-            .order_by(FloorMessage.timestamp).statement,
-            session.bind)
-    finally:
-        session.close()
-
-
-def get_operators_with_messages() -> list:
-    session = ScopedSession()
-    try:
-        return [row[0] for row in session.query(FloorMessage.operator_name).distinct().all()]
-    finally:
-        session.close()
-
 
 def reconcile_pouring_to_packing(lot_number: str, final_packed_qty: int) -> bool:
     """Balances messy pouring logs against the finalized packing count by adding a single system adjustment."""

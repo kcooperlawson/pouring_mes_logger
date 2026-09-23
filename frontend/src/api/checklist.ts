@@ -27,6 +27,8 @@ export interface ComplianceRow {
   start_expected: boolean
   transfer_expected: boolean
   end_expected: boolean
+  /** A quick job on a pump other than the one the shift began on - no photos owed. */
+  brief: boolean
   complete: boolean
 }
 

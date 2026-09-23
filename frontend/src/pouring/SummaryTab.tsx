@@ -56,8 +56,6 @@ export function SummaryTab() {
         </button>
       </div>
 
-      <BadgeWall />
-
       {!data ? null : !data.has_logs_today ? (
         <p className={`${fl.card} text-center text-sm ${fl.muted}`}>
           📭 Nothing logged yet today. Come back once you've poured, packed, or logged something.
@@ -164,6 +162,13 @@ export function SummaryTab() {
           )}
         </>
       )}
+
+      {/* Career badges, folded away at the bottom - there for anyone who
+          wants to look, not something the screen leads with. */}
+      <details className="mt-2">
+        <summary className={`cursor-pointer text-xs ${fl.muted}`}>🏅 Career badges</summary>
+        <div className="mt-2"><BadgeWall /></div>
+      </details>
     </div>
   )
 }

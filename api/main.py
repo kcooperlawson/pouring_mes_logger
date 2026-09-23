@@ -33,12 +33,10 @@ from api.routers import checklist as checklist_router
 from api.routers import cleanliness as cleanliness_router
 from api.routers import devices as devices_router
 from api.routers import downtime as downtime_router
-from api.routers import floor_comms as floor_comms_router
 from api.routers import google_sync as google_sync_router
 from api.routers import historical as historical_router
 from api.routers import log_management as log_management_router
 from api.routers import lot_verification as lot_verification_router
-from api.routers import notes as notes_router
 from api.routers import packing as packing_router
 from api.routers import pouring as pouring_router
 from api.routers import reactors as reactors_router
@@ -114,8 +112,8 @@ async def ws_updates(websocket: WebSocket):
 
 
 for _router in (auth_router, reference_router, checklist_router, pouring_router,
-                packing_router, downtime_router, audit_router, notes_router, summary_router,
-                scada_router, floor_comms_router, reactors_router, cleanliness_router, roster_router,
+                packing_router, downtime_router, audit_router, summary_router,
+                scada_router, reactors_router, cleanliness_router, roster_router,
                 scrap_router, lot_verification_router, batch_history_router, historical_router,
                 resin_canvas_router, assigned_runs_router, log_management_router, google_sync_router,
                 analytics_router, admin_router, tv_router, devices_router, account_router,

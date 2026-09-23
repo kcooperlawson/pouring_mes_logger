@@ -100,6 +100,7 @@ export function ChecklistStatus({ compact = false }: { compact?: boolean }) {
                     <td className="py-1 pr-2 whitespace-nowrap text-[var(--fl-ink)]">
                       <Drill f={{ pump: row.pump_station, operator: row.operator_name, date_from: day, date_to: day }}>{row.pump_station}</Drill>
                       {row.poured > 0 && <span className={`ml-1 ${fl.muted}`}>· {row.poured} logs</span>}
+                      {row.brief && <span className={`ml-1 ${fl.muted}`} title="A short job on another pump - no photos needed">· quick job</span>}
                     </td>
                     {!compact && <td className={`py-1 pr-2 whitespace-nowrap ${fl.muted}`}>{row.shift}</td>}
                     <td className="py-1 pr-2"><Mark at={row.checklist_at} /></td>
@@ -114,7 +115,7 @@ export function ChecklistStatus({ compact = false }: { compact?: boolean }) {
           <p className={`mt-2 text-xs ${fl.muted}`}>
             A dash means that check isn't expected on this row — the start-of-shift photo belongs to the pump
             the shift began on, a transfer check to a pump somebody moved to, and the end-of-shift photo to the
-            last pump they worked.
+            last pump they worked. A quick job on another pump (under 100 units) needs no photos.
           </p>
         </>
       )}
