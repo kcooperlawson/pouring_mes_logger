@@ -6,6 +6,18 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.28 — Wednesday, September 23, 2026
+### The three photo checks stopped feeling random.
+
+Raised directly: there's no clear indication of what needs doing, and Start/Transfer/End photos are confusing. They're not confusing because of what they're called any more (that got fixed in 3.26) - they're confusing because every one of them only shows up after the fact. The app can't tell you a transfer photo is owed until you've already poured at a second pump, and it can't tell you which pump is your "last" one until you've simply stopped working there. Nothing ever announced any of this in the moment; it just appeared later on the Audit tab.
+
+Three changes, none of them touching when a photo actually becomes required - 3.27's quick-job rule is exactly as it was:
+
+- **Picking a different pump on the Pouring tab now says the rule right there**, before you've poured anything: a quick job under 100 units on this pump needs no photo, going past that will ask for a transfer photo once you submit, and going back to your starting pump afterward never asks again. Said once, at the moment it's relevant, instead of a photo request turning up later with no warning.
+- **A plain-language line on the Audit tab** explains what the three checks actually are: Start is your first pump each shift, Transfer is any later pump you stay at past a quick job, End is whichever pump turns out to be your last.
+- **"I'm ending my shift here."** The app can never know your last pump in advance - it can only guess once you've stopped. Rather than wait on that guess, there's now a button that logs the end-of-shift photo for wherever you're standing, the moment you're actually done, without needing the app to have figured it out first.
+- The outstanding-checks banner also updates the instant a pour lands now, rather than up to a minute later on its own poll - a transfer photo that just became owed shows up right away instead of on the next refresh.
+
 ## 3.27 — Wednesday, September 23, 2026
 ### A quick job on another pump doesn't cost two photos any more.
 

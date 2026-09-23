@@ -109,6 +109,11 @@ export function AuditTab({
         <p className={`text-sm ${fl.muted}`}>
           Read from what you've already logged - not a second form to fill in on top of it.
         </p>
+        <p className={`mt-1 text-xs ${fl.muted}`}>
+          <strong>Start</strong> is the first pump you work each shift. <strong>Transfer</strong> is any later pump
+          you stay at past a quick job. <strong>End</strong> is whichever pump turns out to be your last today -
+          use "I'm ending my shift" below rather than waiting for the app to guess.
+        </p>
       </div>
 
       {!logging && (
@@ -119,6 +124,18 @@ export function AuditTab({
                     onLog={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.transfer, station: myStation })} />
           <CheckCard kind="end" at={myRow?.end_audit_at ?? null} expected={myRow?.end_expected ?? false}
                     onLog={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.end, station: myStation })} />
+          {/* CheckCard above already offers "Log it" once the app has worked
+              out this is your last pump. This is for before that: the app
+              can't know your last pump until you've stopped, so this lets you
+              say so yourself instead of waiting on a guess. */}
+          {!myRow?.end_audit_at && !myRow?.end_expected && (
+            <button
+              onClick={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.end, station: myStation })}
+              className={`${fl.btnSecondary} justify-center py-2.5 text-sm`}
+            >
+              🚪 I'm ending my shift here
+            </button>
+          )}
           {myRow?.brief && (
             <p className={`text-sm ${fl.muted}`}>
               ✅ Quick job on {myStation} - no photos needed. Keep going past 100 units here and it counts as a

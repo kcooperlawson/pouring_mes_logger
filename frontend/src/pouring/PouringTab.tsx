@@ -192,6 +192,11 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
       // Summary tab does, so it has to be told the number just moved.
       queryClient.invalidateQueries({ queryKey: ['summary', 'today'] })
       queryClient.invalidateQueries({ queryKey: ['pouring', 'last-entry'] })
+      // So a transfer or end-of-shift photo that just became owed shows up on
+      // the banner right away, not up to a minute later on useMyChecks' own
+      // poll - the whole complaint this was built to fix was checks that
+      // seem to appear from nowhere.
+      queryClient.invalidateQueries({ queryKey: ['checklist', 'compliance'] })
       if (!isOffTank) setPourTick((t) => t + 1)
     },
     onError: (err, formData) => {
@@ -282,6 +287,17 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
               <option key={p} value={p}>{p}</option>
             ))}
           </select>
+          {/* Only where it's actually relevant: a station different from the
+              one the shift started at is the one case a transfer photo can
+              ever apply to. Says the rule up front, at the moment it matters,
+              instead of a photo request just turning up later with no
+              warning - which was the actual complaint, not the rule itself. */}
+          {station && station !== myStation && (
+            <p className={`mt-1 text-xs ${fl.muted}`}>
+              First time here today? A quick job under 100 units needs no photo. Past that, a transfer photo will
+              be asked for once you submit - and going back to {myStation} afterward never asks again.
+            </p>
+          )}
         </div>
         <div>
           <label className={label}>Container Format</label>
