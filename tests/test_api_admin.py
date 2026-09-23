@@ -277,6 +277,103 @@ check(r.status_code == 200, f"deleting by id succeeds (got {r.status_code})")
 check(find(client.get("/api/admin/downtime-reasons").json(), "reason_name", "Test Reason Z") is None,
       "the reason is actually gone - the original page's delete-by-name call could never do this")
 
+# --- uploading an update package from the browser ---------------------------
+# Deliberately does NOT call /apply-uploaded with a real, valid package: that
+# invokes setup/apply_update.py's real pipeline against THIS project's own
+# real root, the same reason this file never exercises real backup
+# create/restore. The rejection paths are all safe to call for real - a
+# rejected upload is deleted again immediately - and the one accept path is
+# cleaned up by hand right after. The full accept-and-apply round trip is
+# proven for real on a disposable plant PC by dev/simulate_upload_update.py.
+import io  # noqa: E402
+import json  # noqa: E402
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+import zipfile  # noqa: E402
+
+sys.path.insert(0, str(ROOT / "dev"))
+import make_update  # noqa: E402
+
+login("operator", "1234")
+r = client.post("/api/updates/upload", files={"file": ("update.zip", io.BytesIO(b"anything"), "application/zip")},
+                headers=CSRF)
+check(r.status_code == 403, f"uploading an update is admin-console only (got {r.status_code})")
+
+login("manager", "admin123")
+
+r = client.post("/api/updates/upload", files={"file": ("notes.txt", io.BytesIO(b"hello"), "text/plain")},
+                headers=CSRF)
+check(r.status_code == 400, f"a file that isn't even named .zip is refused outright (got {r.status_code})")
+
+updates_dir = ROOT / "updates"
+before = set(updates_dir.iterdir()) if updates_dir.is_dir() else set()
+
+r = client.post("/api/updates/upload", files={"file": ("update.zip", io.BytesIO(b"not actually a zip"), "application/zip")},
+                headers=CSRF)
+check(r.status_code == 400, f"a file that isn't a real zip is refused (got {r.status_code})")
+check(set(updates_dir.iterdir()) == before, "...and nothing it saved along the way is left behind")
+
+# A real zip with no update manifest in it at all.
+bad_zip = io.BytesIO()
+with zipfile.ZipFile(bad_zip, "w") as zf:
+    zf.writestr("hello.txt", "not an update")
+bad_zip.seek(0)
+r = client.post("/api/updates/upload", files={"file": ("update.zip", bad_zip, "application/zip")}, headers=CSRF)
+check(r.status_code == 400 and "manifest" in r.json()["detail"],
+      f"a zip with no manifest is refused with a plain reason (got {r.status_code}, {r.json()})")
+check(set(updates_dir.iterdir()) == before, "...and again, nothing lingers")
+
+# A real, correctly-built package, tampered with after signing - the same
+# tamper this project's own signature tests already use elsewhere.
+scratch = pathlib.Path(tempfile.mkdtemp(prefix="test_upload_"))
+try:
+    good_path, good_manifest = make_update.build_release(notes="uploaded from a phone", out_dir=scratch)
+    tampered = io.BytesIO()
+    with zipfile.ZipFile(good_path) as src, zipfile.ZipFile(tampered, "w", zipfile.ZIP_DEFLATED) as dst:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            if item.filename == "mes_update.json":
+                doc = json.loads(data)
+                doc["to_version"] = "PT-V0.01"  # signature no longer matches
+                data = json.dumps(doc, indent=2).encode()
+            dst.writestr(item, data)
+    tampered.seek(0)
+    r = client.post("/api/updates/upload", files={"file": ("update.zip", tampered, "application/zip")}, headers=CSRF)
+    check(r.status_code == 400 and "signature" in r.json()["detail"].lower(),
+          f"a package altered after it was signed is refused, not silently accepted (got {r.status_code}, {r.json()})")
+    check(set(updates_dir.iterdir()) == before, "...and it isn't left sitting in updates\\ either")
+
+    # The genuine article: accepted, reported correctly, and nothing else
+    # about it (its actual bytes) is trusted differently for having arrived
+    # this way.
+    with open(good_path, "rb") as fh:
+        r = client.post("/api/updates/upload", files={"file": ("update.zip", fh, "application/zip")}, headers=CSRF)
+    check(r.status_code == 200, f"a real, validly-signed package upload succeeds (got {r.status_code} {r.text[:200]})")
+    uploaded = r.json()
+    check(uploaded["to_version"] == good_manifest["to_version"] and uploaded["notes"] == "uploaded from a phone",
+          f"...and reports the package's own manifest back accurately (got {uploaded})")
+    check(uploaded["filename"] != "update.zip",
+          "...saved under a name this PC picked, not the one the browser sent")
+    check(uploaded["current"] is True and uploaded["newer"] is False,
+          f"...and correctly reads as this PC's own running version, not newer (got {uploaded})")
+    saved = updates_dir / uploaded["filename"]
+    check(saved.is_file(), f"...and it is really sitting in updates\\ under that name ({saved})")
+finally:
+    shutil.rmtree(scratch, ignore_errors=True)
+    for extra in set(updates_dir.iterdir() if updates_dir.is_dir() else []) - before:
+        extra.unlink(missing_ok=True)
+check(set(updates_dir.iterdir()) == before, "the test cleaned up after itself - nothing it uploaded is left in updates\\")
+
+# /apply-uploaded's own safe-to-call-for-real paths: nothing past these
+# checks ever runs setup/apply_update.py's real pipeline.
+r = client.post("/api/updates/apply-uploaded", json={"filename": "not_a_real_file.zip"}, headers=CSRF)
+check(r.status_code == 404, f"applying a filename that was never uploaded is refused (got {r.status_code})")
+r = client.post("/api/updates/apply-uploaded", json={"filename": "../../../../etc/passwd"}, headers=CSRF)
+check(r.status_code == 404,
+      f"a filename that tries to walk out of updates\\ is refused the same way, not treated as a real path (got {r.status_code})")
+
+login("manager", "admin123")
+
 print("\n" + "=" * 66)
 if FAILS:
     print(f"{len(FAILS)} of {CHECKS} API ADMIN CHECKS FAILED:")

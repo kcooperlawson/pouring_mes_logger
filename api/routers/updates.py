@@ -18,25 +18,36 @@ Three routes:
                             that holds dev/update_signing_private.pem and a
                             GITHUB_RELEASE_TOKEN - see dev/update_publish.py)
 """
+import contextlib
+import io
 import json
+import os
 import sys
+import uuid
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from api import update_check
 from api.deps import get_current_user, require_admin_console, require_role
-from api.schemas.updates import (ApplyUpdateOut, ApplyVersionRequest, AvailableUpdate,
-                                 RestorePoint, UpdateAttempt,
-                                 PublishUpdateOut, PublishUpdateRequest, UpdateSourceOut,
-                                 UpdateSourceRequest, UpdateStatusOut)
+from api.schemas.updates import (ApplyUpdateOut, ApplyUploadedRequest, ApplyVersionRequest,
+                                 AvailableUpdate, PublishUpdateOut, PublishUpdateRequest,
+                                 RestorePoint, UpdateAttempt, UpdateSourceOut,
+                                 UpdateSourceRequest, UpdateStatusOut, UploadedPackage)
 
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT / "setup"))
 sys.path.insert(0, str(ROOT / "dev"))
 
 router = APIRouter(prefix="/updates", tags=["updates"])
+
+# A phone on a slow connection uploading the whole app is the case this
+# exists for, but "the whole app" has a real size - a little over 10 MB
+# today. 300 MB is generous headroom for that to grow without ever being big
+# enough to let a stray or hostile upload fill the disk.
+MAX_UPLOAD_BYTES = 300 * 1024 * 1024
 
 
 @router.get("/changelog")
@@ -175,6 +186,124 @@ def apply_update_route(body: ApplyVersionRequest | None = None,
     return ApplyUpdateOut(ok=result["ok"], version=result["version"],
                           log=result["log"], restarting=mode != "manual",
                           restart_mode=mode)
+
+
+@router.post("/upload", response_model=UploadedPackage)
+async def upload(file: UploadFile = File(...), user: dict = Depends(require_admin_console)):
+    """A package carried in through the browser instead of the network - a
+    phone with no path to the update server, or a laptop with the file
+    already on it. Saved, checked, and reported back; applying it is a
+    separate, explicit step (/apply-uploaded), the same two-step shape as
+    every other install here.
+
+    "Checked" means the same integrity and signature checks
+    setup/apply_update.py runs on any other package, run here before a
+    single byte of it can ever be applied - a package that fails either one
+    is deleted again immediately. Nothing about arriving via upload instead
+    of GitHub or a USB stick lowers the bar; it is the same signed, checksummed
+    file, carried a different way.
+    """
+    import apply_update  # setup/apply_update.py
+    import update_signing  # setup/update_signing.py
+
+    if not (file.filename or "").lower().endswith(".zip"):
+        raise HTTPException(status_code=400, detail="That isn't a .zip file - an update package always is one.")
+
+    updates_dir = ROOT / "updates"
+    updates_dir.mkdir(exist_ok=True)
+    # Named by this PC, never by whatever the phone called it - a filename
+    # is a path component the moment something reads it back off disk, and
+    # the one the browser sent is not something to trust with that.
+    saved_name = f"uploaded_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:8]}.zip"
+    saved_path = updates_dir / saved_name
+
+    written = 0
+    try:
+        with open(saved_path, "wb") as out:
+            while chunk := await file.read(1024 * 1024):
+                written += len(chunk)
+                if written > MAX_UPLOAD_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"That's over {MAX_UPLOAD_BYTES // (1024 * 1024)} MB, which is far bigger than a "
+                               f"real update package - stopped reading it rather than filling the disk.")
+                out.write(chunk)
+    except HTTPException:
+        saved_path.unlink(missing_ok=True)
+        raise
+    except OSError as exc:
+        saved_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=500, detail=f"could not save the upload ({exc})")
+
+    # The zip has to be fully closed before a rejected file can be deleted -
+    # Windows refuses to unlink a file this same process still has open,
+    # unlike POSIX, so nothing here deletes saved_path from inside the `with`
+    # block below. rejection is worked out first and acted on after.
+    rejection: str | None = None
+    manifest: dict = {}
+    try:
+        with zipfile.ZipFile(saved_path) as zf:
+            try:
+                manifest = apply_update.read_manifest(zf)
+            except ValueError as exc:
+                rejection = str(exc)
+            if not rejection:
+                problems = apply_update.check_package(zf, manifest)
+                if problems:
+                    rejection = "This isn't a valid update package: " + "; ".join(problems[:3])
+            if not rejection:
+                sig_ok, sig_detail = update_signing.verify(manifest)
+                if not sig_ok:
+                    rejection = (f"Signature check failed: {sig_detail}. This did not come from the real "
+                                f"signing key, or was altered after it was built - refusing it.")
+    except zipfile.BadZipFile:
+        rejection = "That file isn't a zip at all, or it didn't arrive whole - try uploading it again."
+
+    if rejection:
+        saved_path.unlink(missing_ok=True)
+        raise HTTPException(status_code=400, detail=rejection)
+
+    to_version = str(manifest.get("to_version", ""))
+    here = update_check.current_version()
+    return UploadedPackage(
+        filename=saved_name, to_version=to_version,
+        from_version=manifest.get("from_version"), notes=str(manifest.get("notes", "")),
+        file_count=len(manifest.get("files", [])), size_bytes=written,
+        current=to_version == here,
+        newer=update_check.version_tuple(to_version) > update_check.version_tuple(here),
+    )
+
+
+@router.post("/apply-uploaded", response_model=ApplyUpdateOut)
+def apply_uploaded_route(body: ApplyUploadedRequest, user: dict = Depends(require_admin_console)):
+    """Applies a package /upload already checked and saved. Takes a bare
+    filename, not a path - it is resolved against updates\\ and nowhere
+    else can ever be reached through this route, upload or otherwise."""
+    import apply_update  # setup/apply_update.py
+
+    name = os.path.basename(body.filename)
+    path = ROOT / "updates" / name
+    if name != body.filename or not path.is_file():
+        raise HTTPException(status_code=404, detail="That upload isn't on this PC any more - upload it again.")
+
+    try:
+        update_check.refuse_on_a_development_checkout()
+    except update_check.CheckError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+
+    log_capture = io.StringIO()
+    with contextlib.redirect_stdout(log_capture):
+        code = apply_update.apply(str(path), root=str(ROOT), assume_yes=True, allow_older=body.allow_older)
+    version = apply_update.read_version(str(ROOT))
+    ok = code == 0
+
+    mode = "manual"
+    if ok:
+        import self_restart  # setup/self_restart.py
+        mode = self_restart.request_restart(root=ROOT)
+
+    return ApplyUpdateOut(ok=ok, version=version, log=log_capture.getvalue(),
+                          restarting=mode != "manual", restart_mode=mode)
 
 
 @router.post("/publish", response_model=PublishUpdateOut)

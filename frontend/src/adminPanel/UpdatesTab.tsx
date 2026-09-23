@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
-import { updatesApi, type AvailableUpdate } from '../api/updates'
+import { useEffect, useRef, useState } from 'react'
+import { updatesApi, type AvailableUpdate, type UploadedPackage } from '../api/updates'
 import { stagger } from '../shell/motion'
 import { fl } from '../theme'
 
@@ -38,6 +38,8 @@ export function UpdatesTab() {
   const [token, setToken] = useState('')
   const [touched, setTouched] = useState(false)
   const [confirming, setConfirming] = useState<AvailableUpdate | null>(null)
+  const [uploadPending, setUploadPending] = useState<UploadedPackage | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const statusQuery = useQuery({ queryKey: ['updates-status'], queryFn: updatesApi.status })
   const sourceQuery = useQuery({ queryKey: ['updates-source'], queryFn: updatesApi.source })
@@ -83,6 +85,15 @@ export function UpdatesTab() {
       updatesApi.applyVersion(version, allowOlder),
     onSuccess: refreshAll,
   })
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => updatesApi.upload(file),
+    onSuccess: (pkg) => setUploadPending(pkg),
+  })
+  const applyUploadedMutation = useMutation({
+    mutationFn: ({ filename, allowOlder }: { filename: string; allowOlder: boolean }) =>
+      updatesApi.applyUploaded(filename, allowOlder),
+    onSuccess: () => { setUploadPending(null); refreshAll() },
+  })
 
   const status = statusQuery.data
   const source = sourceQuery.data
@@ -92,6 +103,19 @@ export function UpdatesTab() {
   const newer = versions.filter((v) => v.newer)
   const older = versions.filter((v) => !v.newer && !v.current)
   const busy = applyMutation.isPending
+  const uploadBusy = applyUploadedMutation.isPending
+
+  const handleFilePicked = (file: File | undefined) => {
+    if (!file) return
+    setUploadPending(null)
+    uploadMutation.reset()
+    applyUploadedMutation.reset()
+    uploadMutation.mutate(file)
+  }
+
+  const goUploaded = (pkg: UploadedPackage) => {
+    applyUploadedMutation.mutate({ filename: pkg.filename, allowOlder: !pkg.newer && !pkg.current })
+  }
 
   const go = (entry: AvailableUpdate) => {
     applyMutation.mutate({ version: entry.version, allowOlder: !entry.newer && !entry.current })
@@ -212,6 +236,100 @@ export function UpdatesTab() {
           </div>
         </div>
       )}
+
+      {/* --- carried in by hand: a phone, a laptop, no connection to a source --- */}
+      <div className={card}>
+        <p className="text-sm font-semibold text-[var(--fl-ink)]">📱 Upload a package</p>
+        <p className={`mt-1 text-xs ${fl.muted}`}>
+          Standing at this PC with the update file already in hand - on a phone, off a USB stick plugged into a
+          laptop - and no way to reach the update server or GitHub from here. Pick the <code>.zip</code>, and it goes
+          through the exact same checks and safety steps as any other update.
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip"
+            className="hidden"
+            onChange={(e) => { handleFilePicked(e.target.files?.[0]); e.target.value = '' }}
+          />
+          <button
+            className={fl.btnSecondary}
+            disabled={uploadMutation.isPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            {uploadMutation.isPending ? '⏳ Checking the file…' : '📤 Choose a package…'}
+          </button>
+        </div>
+        {uploadMutation.isError && (
+          <p className="mt-2 text-xs text-red-400">{(uploadMutation.error as Error).message}</p>
+        )}
+
+        {uploadPending && (
+          <div className={`mt-3 rounded-lg border border-[var(--fl-accent)] p-2.5`}>
+            <p className="text-sm font-semibold text-[var(--fl-ink)]">
+              {uploadPending.newer
+                ? `Install ${uploadPending.to_version}?`
+                : uploadPending.current
+                  ? `Already running ${uploadPending.to_version}`
+                  : `Go back to ${uploadPending.to_version}?`}
+            </p>
+            <p className={`mt-1 text-xs ${fl.muted}`}>
+              {uploadPending.file_count} file{uploadPending.file_count === 1 ? '' : 's'}
+              {uploadPending.from_version ? ` · built from ${uploadPending.from_version}` : ''}
+              {uploadPending.notes ? ` · ${uploadPending.notes.split('\n')[0]}` : ''}
+            </p>
+            {!uploadPending.current && (
+              <ul className={`mt-1 list-disc pl-5 text-xs ${fl.muted}`}>
+                <li>The database is backed up first. Nothing is written until that succeeds.</li>
+                <li>The app restarts itself, so anyone using it - including an operator mid-pour - is disconnected for about twenty seconds.</li>
+                {uploadPending.newer ? (
+                  <li>If the new version does not start, the old one is put back automatically.</li>
+                ) : (
+                  <>
+                    <li>The schema is walked back to what {uploadPending.to_version} expects, before its files are written.</li>
+                    <li>Anything newer than {uploadPending.to_version} is cleared out, so this PC ends up as that release and not a mix of two.</li>
+                    <li>Data entered since then stays in the database. A column a newer version added may be dropped with it, and the backup above is the way back to it.</li>
+                  </>
+                )}
+              </ul>
+            )}
+            <div className="mt-2 flex gap-2">
+              {!uploadPending.current && (
+                <button className={fl.btn} disabled={uploadBusy} onClick={() => goUploaded(uploadPending)}>
+                  {uploadBusy ? '⏳ Working…' : uploadPending.newer ? 'Install it' : 'Go back to it'}
+                </button>
+              )}
+              <button className={fl.btnSecondary} onClick={() => setUploadPending(null)}>
+                {uploadPending.current ? 'Close' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {applyUploadedMutation.isSuccess && (
+          <div className={`mt-3 rounded-lg border p-2.5 text-xs ${
+            applyUploadedMutation.data.ok ? 'border-emerald-800 bg-emerald-950/40 text-emerald-300'
+              : 'border-red-800 bg-red-950/40 text-red-300'}`}>
+            {applyUploadedMutation.data.ok
+              ? `Done. This PC is on ${applyUploadedMutation.data.version}.${applyUploadedMutation.data.restarting
+                  ? ' It is restarting itself now - reload in about 20 seconds.'
+                  : ' Close the app window and start it again to run it.'}`
+              : 'It did not take. The previous version was put back automatically, and the database backup taken first is in backups\\.'}
+          </div>
+        )}
+        {applyUploadedMutation.isSuccess && !applyUploadedMutation.data.ok && (
+          <details className="mt-2">
+            <summary className={`cursor-pointer text-xs ${fl.muted}`}>What it said, step by step</summary>
+            <pre className="mt-1 max-h-60 overflow-auto rounded bg-black/40 p-2 text-[10px] text-[var(--fl-body)]">
+              {applyUploadedMutation.data.log}
+            </pre>
+          </details>
+        )}
+        {applyUploadedMutation.isError && (
+          <p className="mt-2 text-xs text-red-400">{(applyUploadedMutation.error as Error).message}</p>
+        )}
+      </div>
 
       {/* --- everything the source offers --- */}
       <div className={card}>

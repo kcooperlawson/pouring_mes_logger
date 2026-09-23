@@ -8,6 +8,17 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 4.25 — Tuesday, September 22, 2026
+**Update this PC from a phone, with the file already in hand - no connection to the update server or GitHub needed.**
+
+The update server this runs against lives at home, and I don't always have a way to reach it from the plant - either because I'm not on that network, or because home's connection is down. Every other way to get an update onto this PC needed one of those two things reachable. If neither was, the only option left was carrying a USB stick.
+
+The Updates screen now has an "Upload a package" card, right under the version this PC is running. Pick a `.zip` - off a phone, off a USB stick plugged into a laptop, wherever the file already is - and it goes through the exact same checks a package from the update server or GitHub already goes through: the same signature verification, the same "is this really a package and not garbage" check. Nothing about the pipeline that actually applies it is different - the same backup-first, verify-it-boots, roll-back-on-failure steps run either way. A bad file is rejected and never touches disk; anything that passes shows what it is - version, what it says about itself, how many files - before asking to actually install it, the same confirmation as anywhere else on that screen.
+
+Built and proved this one the hard way before trusting it: a disposable plant PC, a real signed package built from this exact tree, uploaded over a real HTTP connection to a real running server, actually applied, and the version on disk actually changed. Found and fixed a real bug doing that - rejecting a bad upload was trying to delete the file while it was still open, which Windows won't allow, so a garbage upload crashed instead of just being refused. Fixed before it ever went out.
+
+---
+
 ## 4.24 — Tuesday, September 22, 2026
 **A real workflow, not just a pile of correct screens. Plus a genuine bug the redesign turned up.**
 

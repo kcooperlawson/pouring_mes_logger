@@ -77,3 +77,31 @@ class AvailableUpdate(BaseModel):
 class ApplyVersionRequest(BaseModel):
     version: str = ""          # blank means "the newest one"
     allow_older: bool = False  # installing an older release, deliberately
+
+
+class UploadedPackage(BaseModel):
+    """What a package uploaded straight from the browser turned out to be.
+    Only ever returned once it has already passed the same integrity and
+    signature checks setup/apply_update.py runs on any other package - a
+    response here means it is genuine, not just that the upload succeeded.
+
+    filename is what to hand back to /apply-uploaded - the name this PC
+    saved it under, never the one the phone sent, which is never trusted as
+    a path."""
+    filename: str
+    to_version: str
+    from_version: str | None
+    notes: str
+    file_count: int
+    size_bytes: int
+    # Compared the same way the version list is (a numeric tuple, not string
+    # order - "PT-V4.9" reads as older than "PT-V4.10" lexicographically,
+    # which is wrong), so the confirmation panel can say "install" or "go
+    # back to this" correctly without the browser guessing.
+    current: bool
+    newer: bool
+
+
+class ApplyUploadedRequest(BaseModel):
+    filename: str
+    allow_older: bool = False

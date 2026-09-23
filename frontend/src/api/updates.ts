@@ -60,6 +60,17 @@ export interface RestorePoint {
   at: string
 }
 
+export interface UploadedPackage {
+  filename: string
+  to_version: string
+  from_version: string | null
+  notes: string
+  file_count: number
+  size_bytes: number
+  current: boolean
+  newer: boolean
+}
+
 export const updatesApi = {
   /** What this PC has actually been through, newest first - the failures too. */
   history: () => api.get<UpdateAttempt[]>('/updates/history'),
@@ -73,6 +84,18 @@ export const updatesApi = {
   apply: () => api.post<ApplyUpdateResult>('/updates/apply', {}),
   applyVersion: (version: string, allowOlder: boolean) =>
     api.post<ApplyUpdateResult>('/updates/apply', { version, allow_older: allowOlder }),
+
+  /** A package carried in through the browser - a phone with no path to the
+   *  update server, a laptop with the file already on it. Checked the same
+   *  way any other package is before this ever returns; a response means
+   *  it's genuine, not just that the bytes arrived. */
+  upload: (file: File) => {
+    const fd = new FormData()
+    fd.set('file', file)
+    return api.postForm<UploadedPackage>('/updates/upload', fd)
+  },
+  applyUploaded: (filename: string, allowOlder: boolean) =>
+    api.post<ApplyUpdateResult>('/updates/apply-uploaded', { filename, allow_older: allowOlder }),
 
   source: () => api.get<UpdateSource>('/updates/source'),
   setSource: (address: string, token: string | null) =>
