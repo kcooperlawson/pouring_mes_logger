@@ -6,6 +6,7 @@ import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
 import { enqueue, isConnectivityError } from '../offline/queue'
 import { playLogged } from '../sound/chimes'
 import { useToast } from '../toast/ToastProvider'
+import { Step } from './StepCard'
 import { fl } from '../theme'
 
 const input = `${fl.input} py-3 text-base font-normal text-[#F8FAFC]`
@@ -63,95 +64,100 @@ export function DowntimeTab({ myStation }: { myStation: string }) {
     },
   })
 
+  const step1Done = !!station && !!reason
+  const step2Done = step1Done && duration > 0
+
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-[var(--fl-body)]">
-        Station Downtime Event Logger
-      </h3>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div>
-          <label className={label}>Downtime Station</label>
-          <select className={input} value={station} onChange={(e) => setStation(e.target.value)}>
-            <option value="">— choose —</option>
-            {(pumpsQuery.data ?? []).map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
+      <Step n={1} title="Station & reason" done={step1Done} hint={step1Done ? undefined : 'pick both'}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className={label}>Downtime Station</label>
+            <select className={input} value={station} onChange={(e) => setStation(e.target.value)}>
+              <option value="">— choose —</option>
+              {(pumpsQuery.data ?? []).map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={label}>Reason for Downtime</label>
+            <select className={input} value={reason} onChange={(e) => setReason(e.target.value)}>
+              <option value="">— choose —</option>
+              {(reasonsQuery.data ?? []).map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
         </div>
-        <div>
-          <label className={label}>Reason for Downtime</label>
-          <select className={input} value={reason} onChange={(e) => setReason(e.target.value)}>
-            <option value="">— choose —</option>
-            {(reasonsQuery.data ?? []).map((r) => (
-              <option key={r} value={r}>{r}</option>
-            ))}
-          </select>
-        </div>
-        <div className="sm:col-span-2">
-          <label className={label}>Time it as it happens</label>
-          {startedAt === null ? (
+      </Step>
+
+      <Step n={2} title="How long, and what fixed it" done={step2Done}>
+        <label className={label}>Time it as it happens</label>
+        {startedAt === null ? (
+          <button
+            className={`${fl.btnSecondary} mt-1 w-full`}
+            disabled={!station || !reason}
+            onClick={() => setStartedAt(Date.now())}
+          >
+            ▶️ Start timing {reason ? `“${reason}”` : '(pick a reason first)'}
+          </button>
+        ) : (
+          <div className="mt-1 flex items-center gap-2">
+            <span className="flex-1 rounded border border-[var(--fl-accent)] bg-[var(--fl-surface)] px-3 py-2 text-lg font-extrabold tabular-nums text-[var(--fl-accent)]">
+              ⏱️ {runningLabel}
+            </span>
             <button
-              className={`${fl.btnSecondary} mt-1 w-full`}
-              disabled={!station || !reason}
-              onClick={() => setStartedAt(Date.now())}
+              className={fl.btn}
+              onClick={() => {
+                // Always at least a minute: a stop two seconds after a
+                // start is a mis-tap, and a zero would quietly buy back
+                // pace credit for time that was really lost.
+                setDuration(Math.max(1, Math.round(runningSeconds / 60)))
+                setStartedAt(null)
+              }}
             >
-              ▶️ Start timing {reason ? `“${reason}”` : '(pick a reason first)'}
+              ⏹️ Stop
             </button>
-          ) : (
-            <div className="mt-1 flex items-center gap-2">
-              <span className="flex-1 rounded border border-[var(--fl-accent)] bg-[var(--fl-surface)] px-3 py-2 text-lg font-extrabold tabular-nums text-[var(--fl-accent)]">
-                ⏱️ {runningLabel}
-              </span>
-              <button
-                className={fl.btn}
-                onClick={() => {
-                  // Always at least a minute: a stop two seconds after a
-                  // start is a mis-tap, and a zero would quietly buy back
-                  // pace credit for time that was really lost.
-                  setDuration(Math.max(1, Math.round(runningSeconds / 60)))
-                  setStartedAt(null)
-                }}
-              >
-                ⏹️ Stop
-              </button>
-              <button className={fl.btnSecondary} onClick={() => setStartedAt(null)}>✕</button>
-            </div>
-          )}
-          <p className={`mt-1 text-xs ${fl.muted}`}>
-            Or just type the minutes below. The timer only fills that box in — nothing is recorded until you submit.
-          </p>
+            <button className={fl.btnSecondary} onClick={() => setStartedAt(null)}>✕</button>
+          </div>
+        )}
+        <p className={`mb-3 mt-1 text-xs ${fl.muted}`}>
+          Or just type the minutes below. The timer only fills that box in — nothing is recorded until you submit.
+        </p>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div>
+            <label className={label}>Downtime Duration (Minutes)</label>
+            <input
+              className={input}
+              type="number"
+              min={1}
+              max={240}
+              step={5}
+              value={duration || ''}
+              onChange={(e) => setDuration(Number(e.target.value))}
+            />
+          </div>
+          <div>
+            <label className={label}>Corrective Action Taken</label>
+            <input
+              className={input}
+              placeholder="Cleaned dispensing valve nozzle."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+          </div>
         </div>
 
-        <div>
-          <label className={label}>Downtime Duration (Minutes)</label>
-          <input
-            className={input}
-            type="number"
-            min={1}
-            max={240}
-            step={5}
-            value={duration || ''}
-            onChange={(e) => setDuration(Number(e.target.value))}
-          />
-        </div>
-        <div>
-          <label className={label}>Corrective Action Taken</label>
-          <input
-            className={input}
-            placeholder="Cleaned dispensing valve nozzle."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-      </div>
-
-      <button
-        className={btn}
-        disabled={!station || !reason || submitMutation.isPending}
-        onClick={() => submitMutation.mutate()}
-      >
-        ⚠️ Record Downtime Event
-      </button>
+        <button
+          className={`${btn} mt-3`}
+          disabled={!station || !reason || submitMutation.isPending}
+          onClick={() => submitMutation.mutate()}
+        >
+          ⚠️ Record Downtime Event
+        </button>
+      </Step>
     </div>
   )
 }

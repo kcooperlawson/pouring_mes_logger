@@ -6,6 +6,15 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.29 — Wednesday, September 23, 2026
+### Downtime and Packing look like the same app as Pouring now.
+
+First step of a bigger redesign pass: nothing here changes what any tab does, only how it looks. The Pouring tab got a numbered-card layout in 4.16 - a step ticks green when it's satisfied, instead of a plain heading. Downtime and Packing never got that pass, so switching to either one felt like landing on an older screen mid-shift.
+
+Both are the same two- or three-field forms they always were, just laid out as the same numbered cards Pouring uses. The card component itself moved into its own file (`StepCard.tsx`) so all three tabs share one definition instead of Pouring quietly owning the only copy.
+
+More of this is coming - the rest of the operator form and a batch of manager pages (Log Management, Roster, Google Sync, Historical, Lot Verification, Assigned Runs, Analytics Hub, Resin Canvas) still look like an earlier version of the app next to Cockpit and Live SCADA.
+
 ## 3.28 — Wednesday, September 23, 2026
 ### The three photo checks stopped feeling random.
 

@@ -7,6 +7,7 @@ import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
 import { enqueue, isConnectivityError } from '../offline/queue'
 import { playLogged } from '../sound/chimes'
 import { useToast } from '../toast/ToastProvider'
+import { Step } from './StepCard'
 import { fl } from '../theme'
 
 const input = `${fl.input} py-3 text-base font-normal text-[var(--fl-ink)]`
@@ -67,79 +68,80 @@ export function PackingTab() {
     },
   })
 
+  const step1Done = !!cartLabel && !!resin && !!lot
+  const step2Done = step1Done && unitsPacked > 0
+
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-[#CBD5E1]">
-        1. Packing Details
-      </h3>
-      <p className={`text-sm ${fl.muted}`}>Location: End-of-Line / Pack-Out</p>
+      <Step n={1} title="Packing details" done={step1Done} hint="End-of-Line / Pack-Out">
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className={label}>Container Format</label>
+            <select className={input} value={cartLabel} onChange={(e) => setCartLabel(e.target.value)}>
+              {CART_LABELS.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
 
-      <div>
-        <label className={label}>Container Format</label>
-        <select className={input} value={cartLabel} onChange={(e) => setCartLabel(e.target.value)}>
-          {CART_LABELS.map((l) => (
-            <option key={l} value={l}>{l}</option>
-          ))}
-        </select>
-      </div>
+          <div>
+            <label className={label}>Resin Formulation</label>
+            <select className={input} value={resin} onChange={(e) => setResin(e.target.value)}>
+              <option value="">— choose —</option>
+              {resinNames.map((r) => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
+          </div>
 
-      <div>
-        <label className={label}>Resin Formulation</label>
-        <select className={input} value={resin} onChange={(e) => setResin(e.target.value)}>
-          <option value="">— choose —</option>
-          {resinNames.map((r) => (
-            <option key={r} value={r}>{r}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className={label}>Batch Lot Number Being Packed</label>
-        <input className={input} value={lot} onChange={(e) => setLot(e.target.value)} />
-      </div>
-
-      <hr className={fl.divider} />
-      <h3 className="text-sm font-semibold text-[#CBD5E1]">2. Units Packed</h3>
-
-      <div>
-        <label className={label}>✅ Total Good Units Packed</label>
-        <input
-          className={input}
-          type="number"
-          min={1}
-          step={50}
-          value={unitsPacked || ''}
-          onChange={(e) => setUnitsPacked(Number(e.target.value))}
-        />
-        <p className={`mt-1 text-xs ${fl.muted}`}>
-          Equates to: <strong className="text-[var(--fl-body)]">{skids.toFixed(2)} skids</strong> (based on {unitsPerSkid} units/skid)
-        </p>
-      </div>
-
-      <div>
-        <label className={label}>Packing Notes / Box Issues</label>
-        <textarea
-          className={textarea}
-          rows={2}
-          placeholder="e.g. 2 partial boxes added to skid."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-        />
-      </div>
-
-      {submitLock.locked ? (
-        <div className="rounded-lg border border-emerald-800 bg-emerald-950 px-4 py-4 text-center text-sm font-medium text-emerald-300">
-          ✅ Logged — {submitLock.secondsLeft}s
+          <div>
+            <label className={label}>Batch Lot Number Being Packed</label>
+            <input className={input} value={lot} onChange={(e) => setLot(e.target.value)} />
+          </div>
         </div>
-      ) : (
-        <button
-          className={btn}
-          disabled={!resin || unitsPacked <= 0 || submitMutation.isPending}
-          onClick={() => submitMutation.mutate()}
-        >
-          📦 SUBMIT PACKING LOG
-        </button>
-      )}
+      </Step>
+
+      <Step n={2} title="Units packed" done={step2Done}>
+        <div>
+          <label className={label}>✅ Total Good Units Packed</label>
+          <input
+            className={input}
+            type="number"
+            min={1}
+            step={50}
+            value={unitsPacked || ''}
+            onChange={(e) => setUnitsPacked(Number(e.target.value))}
+          />
+          <p className={`mt-1 text-xs ${fl.muted}`}>
+            Equates to: <strong className="text-[var(--fl-body)]">{skids.toFixed(2)} skids</strong> (based on {unitsPerSkid} units/skid)
+          </p>
+        </div>
+
+        <div className="mt-3">
+          <label className={label}>Packing Notes / Box Issues</label>
+          <textarea
+            className={textarea}
+            rows={2}
+            placeholder="e.g. 2 partial boxes added to skid."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+          />
+        </div>
+
+        {submitLock.locked ? (
+          <div className="mt-3 rounded-lg border border-emerald-800 bg-emerald-950 px-4 py-4 text-center text-sm font-medium text-emerald-300">
+            ✅ Logged — {submitLock.secondsLeft}s
+          </div>
+        ) : (
+          <button
+            className={`${btn} mt-3`}
+            disabled={!resin || unitsPacked <= 0 || submitMutation.isPending}
+            onClick={() => submitMutation.mutate()}
+          >
+            📦 SUBMIT PACKING LOG
+          </button>
+        )}
+      </Step>
     </div>
   )
 }

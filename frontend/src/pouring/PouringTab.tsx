@@ -15,36 +15,10 @@ import { ChangeoverBanner } from './ChangeoverBanner'
 import { EMPTY_BULK, ProductionOutputFields, type BulkState } from './ProductionOutputFields'
 import { EMPTY_LOT_FIELDS, LotVerificationGate, type LotFieldsState } from './LotVerificationGate'
 import { SubmitBar } from './SubmitBar'
+import { Step } from './StepCard'
 import { fl } from '../theme'
 
 const select = `${fl.select} py-3 text-base`
-
-// The form is three steps and always has been - station and material, the lot
-// check, then the count - but they were three identical headings in one long
-// column, so the screen read as a single wall of fields and nothing showed
-// how far through it you were. A step is a card with a numbered chip that
-// ticks when it is satisfied: the same fields, with the shape of the job
-// visible in them.
-function Step({
-  n, title, done, children, hint,
-}: { n: number; title: string; done?: boolean; children: React.ReactNode; hint?: string }) {
-  return (
-    <section className={`${fl.card} ${done ? 'border-emerald-700/50' : ''}`}>
-      <div className="mb-2 flex items-center gap-2">
-        <span
-          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold transition ${
-            done ? 'bg-emerald-500 text-white' : 'bg-[var(--fl-accent-wash)] text-[var(--fl-accent-2)]'
-          }`}
-        >
-          {done ? '✓' : n}
-        </span>
-        <h3 className="text-sm font-bold text-[var(--fl-ink)]">{title}</h3>
-        {hint && <span className={`ml-auto text-xs ${fl.muted}`}>{hint}</span>}
-      </div>
-      {children}
-    </section>
-  )
-}
 const label = `mb-1 block ${fl.label}`
 const textarea = `${fl.input} py-2 text-base font-normal text-[var(--fl-ink)]`
 
