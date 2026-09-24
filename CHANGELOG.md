@@ -6,8 +6,40 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
-## 3.34 — Wednesday, September 23, 2026
-### Getting ready for second shift: a packing lot bug fixed, a recap at the end of every shift, QC in the exports, and a handful of smaller fixes.
+## 3.28 — Wednesday, September 23, 2026
+**Getting ready for second shift: clearer photo checks, a redesign of every screen that still looked old, a guided tour for anyone new, a recap at the end of each shift, QC in the exports, and a packing lot bug fixed.**
+
+One day's work, one update. It installs over 3.27 or anything older.
+
+### The three photo checks stopped feeling random
+
+Raised directly: there's no clear indication of what needs doing, and Start/Transfer/End photos are confusing. They're not confusing because of what they're called any more (that got fixed in 3.26) - they're confusing because every one of them only shows up after the fact. The app can't tell you a transfer photo is owed until you've already poured at a second pump, and it can't tell you which pump is your "last" one until you've simply stopped working there. Nothing ever announced any of this in the moment; it just appeared later on the Audit tab.
+
+Three changes, none of them touching when a photo actually becomes required - 3.27's quick-job rule is exactly as it was:
+
+- **Picking a different pump on the Pouring tab now says the rule right there**, before you've poured anything: a quick job under 100 units on this pump needs no photo, going past that will ask for a transfer photo once you submit, and going back to your starting pump afterward never asks again. Said once, at the moment it's relevant, instead of a photo request turning up later with no warning.
+- **A plain-language line on the Audit tab** explains what the three checks actually are: Start is your first pump each shift, Transfer is any later pump you stay at past a quick job, End is whichever pump turns out to be your last.
+- **"I'm ending my shift here."** The app can never know your last pump in advance - it can only guess once you've stopped. Rather than wait on that guess, there's now a button that logs the end-of-shift photo for wherever you're standing, the moment you're actually done, without needing the app to have figured it out first.
+- The outstanding-checks banner also updates the instant a pour lands now, rather than up to a minute later on its own poll - a transfer photo that just became owed shows up right away instead of on the next refresh.
+
+### The rest of the app looks like the same app
+
+Nothing in this section changes what any screen does, only how it looks. Pouring got a numbered-card layout back in 3.24 - a step ticks green when it's satisfied - and Downtime and Packing never did, so switching to either felt like landing on an older screen mid-shift. The same was true of most of the manager pages next to the Cockpit and Live SCADA.
+
+- **Operator form:** Downtime and Packing now use the same numbered step cards as Pouring. The card lives in its own file (`StepCard.tsx`) so all three share one definition.
+- **Manager pages:** Historical Production Trends, Log Management, Floor Personnel (Roster), Google Sync, Lot Verification, Fleet Production & Work Orders, Nexus Analytics, the Master Resin table, and the Users tab in IT Admin all get the icon headers, banded section dividers and icons the Cockpit and Live SCADA already had. Historical's line chart is the same gradient sparkline Live SCADA uses.
+- Every hard-coded text colour on those pages (`#CBD5E1`, `#F8FAFC`, plain `white`) now uses the theme's own colours - the difference that matters if this is ever run on a light theme.
+- The banded section divider had been copied into three pages; it's one shared component now (`shell/Band.tsx`).
+
+### A guided tour, and the wall display's clock
+
+**A guided tour, for anyone who has never used this before.** Getting ready for second shift to start using this for real - built around the honest answer to "what happens if nobody explains it to them." It auto-launches the first time a brand-new account signs in, highlighting one thing at a time with a spotlight and a Next button: for an operator or packer, that's who you are, the operator guide PDF, the startup checklist, Pouring or Packing, Downtime, your photo checks, your Summary, and where to sign out. For a manager or admin, it's the Manager Cockpit's daily rounds, today's numbers, Live SCADA, IT Admin, and the operations handbook. It skips - automatically, silently - anything that doesn't apply right now (a packer has no Pouring tab; an operator who already finished their checklist has no Step 1 card to show), so it never stalls on something that isn't there. "Take the interactive tour" in Account & Preferences runs it again any time, for a refresher or for someone who skipped it the first time.
+
+Found and fixed while building it: the retry logic that lets a step skip past something not on screen was counting animation frames, and `requestAnimationFrame` gets throttled hard - sometimes to nothing at all - the moment a browser tab isn't the frontmost one. On a real phone that's normal multitasking; here it meant a step could stall silently instead of skipping. Switched to a plain wall-clock timer, which doesn't care whether the tab has focus.
+
+**The wall display was reading its own clock, not the plant's.** Confirmed while making sure everything's solid for two shifts: every other shift calculation in the app already converts to the plant's own timezone rather than trusting the server's raw clock - a lesson learned once already, written up in `shift_clock.py`'s own notes - but the TV dashboard's KPI numbers had their own separate, older calculation that never got the same fix. If the plant PC's clock ever drifts from the plant's actual local time, the wall display could show the wrong shift as active while every other screen showing the correct one. Same fix, one more place: reads the plant's timezone now, not the machine's.
+
+### Second-shift prep: packing lots, a shift recap, QC exports
 
 **Packing could log two different lots under one lot number.** The lot box always opened on LOT-<today>-01. If a second lot got packed the same day and nobody changed the number, both went in as -01 - two batches, one lot on the record, which is the one thing a lot number is there to prevent. It now opens on the next unused number for today (-02, -03...), and shows the lots already packed today as buttons, so keeping on with the same lot is one tap and starting a new one is the default.
 
@@ -23,69 +55,6 @@ Anything before August 31 is written up from the short notes I made at the time.
 - The Downtime tab remembers the station and reason from your last stop today. Never the minutes or the notes - those are about that one stop.
 - The "this pump was already checked today" override asks who did it from the roster instead of a free-text box, so the audit record doesn't end up with "Maria", "maria g." and a nickname as three people. "Someone else" still takes a typed name.
 - The Suggestions inbox shows what's open and in review by default. Resolved items are one tab over instead of burying the open ones.
-
-## 3.33 — Wednesday, September 23, 2026
-### An interactive guide walks anyone new through their first shift, and two real timing bugs got fixed.
-
-**A guided tour, for anyone who has never used this before.** Getting ready for second shift to start using this for real - built around the honest answer to "what happens if nobody explains it to them." It auto-launches the first time a brand-new account signs in, highlighting one thing at a time with a spotlight and a Next button: for an operator or packer, that's who you are, the operator guide PDF, the startup checklist, Pouring or Packing, Downtime, your photo checks, your Summary, and where to sign out. For a manager or admin, it's the Manager Cockpit's daily rounds, today's numbers, Live SCADA, IT Admin, and the operations handbook. It skips - automatically, silently - anything that doesn't apply right now (a packer has no Pouring tab; an operator who already finished their checklist has no Step 1 card to show), so it never stalls on something that isn't there. "Take the interactive tour" in Account & Preferences runs it again any time, for a refresher or for someone who skipped it the first time.
-
-Found and fixed while building it: the retry logic that lets a step skip past something not on screen was counting animation frames, and `requestAnimationFrame` gets throttled hard - sometimes to nothing at all - the moment a browser tab isn't the frontmost one. On a real phone that's normal multitasking; here it meant a step could stall silently instead of skipping. Switched to a plain wall-clock timer, which doesn't care whether the tab has focus.
-
-**The wall display was reading its own clock, not the plant's.** Confirmed while making sure everything's solid for two shifts: every other shift calculation in the app already converts to the plant's own timezone rather than trusting the server's raw clock - a lesson learned once already, written up in `shift_clock.py`'s own notes - but the TV dashboard's KPI numbers had their own separate, older calculation that never got the same fix. If the plant PC's clock ever drifts from the plant's actual local time, the wall display could show the wrong shift as active while every other screen showing the correct one. Same fix, one more place: reads the plant's timezone now, not the machine's.
-
-## 3.32 — Wednesday, September 23, 2026
-### The visual redesign pass is done - every manager page now matches Cockpit and Live SCADA.
-
-Last batch. Same rule as the four releases before it: nothing here changes what a page shows or does, only how it looks.
-
-**Cartridge Lot Verification, Fleet Production Progress & Work Order Dispatch, Nexus Analytics, Master Resin Specification Lookup, and the Users & Roster tab inside IT Admin** all get icon headers in place of emoji, and every hardcoded text color (`#CBD5E1`, `#F8FAFC`, plain `white`) replaced with the theme variables the rest of the app already uses - the difference that actually matters if this ever runs in a light theme instead of the dark one. Lot Verification and Fleet Production's tab strips get icons instead of bare emoji-and-text. The Users tab's six action panels (Provision, Modify Role, Extra Abilities, Reset PIN, Unlock, Terminate) each get an icon on their own summary line.
-
-That's the whole pass, start to finish: the operator form's Downtime and Packing tabs (3.29), then Historical and Log Management (3.30), Roster and Google Sync (3.31), and this last group of five (3.32) - eleven screens total brought up to the same look, with two shared components (`StepCard`, `Band`) pulled out along the way so the pattern lives in one place instead of getting copied page to page again.
-
-## 3.31 — Wednesday, September 23, 2026
-### Roster and Google Sync get the modern look, and the section-divider pattern is shared instead of copied.
-
-Third batch of the visual redesign pass, same rule as the last two: nothing here changes what a page shows or does.
-
-**Floor Personnel Administration** gets an icon header, icons on its "Provision," "Floor Roster" and "Reset PIN" sections, and the roster table rows animate in the same way every other redesigned list in the app does.
-
-**External Reporting & Google Cloud Sync** gets an icon header and its four bare `<hr>`-and-bold-text sections (Destination, Payload Column Customization, Take it as a file, Push it into a linked sheet) replaced with the same banded-divider look Live SCADA uses.
-
-That banded divider was copied into three files by the last two releases - Live SCADA, Historical, and now here. Pulled it into `shell/Band.tsx` so there's one definition instead of three copies quietly drifting apart, and pointed all three pages at it.
-
-Five manager pages left: Lot Verification, Assigned Runs, Analytics Hub, Resin Canvas, and the IT Admin Users tab.
-
-## 3.30 — Wednesday, September 23, 2026
-### Historical and Log Management look like the same app as Cockpit and Live SCADA now.
-
-Second batch of the visual redesign pass - same rule as 3.29: nothing here changes what a page shows or does, only how it looks.
-
-**Historical Production Trends** gets the icon header, banded sections and gradient sparkline chart Live SCADA already uses, instead of its own plain heading and a hand-drawn line chart with none of that shared styling. The filters sit in a card now instead of floating loose above the numbers.
-
-**Log Management & Data Cleanup** gets the same icon header treatment, its filter rows moved into cards, and icons on its tabs and bulk-delete warning instead of plain text and emoji. The table underneath - already using the shared table styling from an earlier pass - is unchanged.
-
-Six manager pages left in this batch: Roster, Google Sync, Lot Verification, Assigned Runs, Analytics Hub, Resin Canvas.
-
-## 3.29 — Wednesday, September 23, 2026
-### Downtime and Packing look like the same app as Pouring now.
-
-First step of a bigger redesign pass: nothing here changes what any tab does, only how it looks. The Pouring tab got a numbered-card layout in 4.16 - a step ticks green when it's satisfied, instead of a plain heading. Downtime and Packing never got that pass, so switching to either one felt like landing on an older screen mid-shift.
-
-Both are the same two- or three-field forms they always were, just laid out as the same numbered cards Pouring uses. The card component itself moved into its own file (`StepCard.tsx`) so all three tabs share one definition instead of Pouring quietly owning the only copy.
-
-More of this is coming - the rest of the operator form and a batch of manager pages (Log Management, Roster, Google Sync, Historical, Lot Verification, Assigned Runs, Analytics Hub, Resin Canvas) still look like an earlier version of the app next to Cockpit and Live SCADA.
-
-## 3.28 — Wednesday, September 23, 2026
-### The three photo checks stopped feeling random.
-
-Raised directly: there's no clear indication of what needs doing, and Start/Transfer/End photos are confusing. They're not confusing because of what they're called any more (that got fixed in 3.26) - they're confusing because every one of them only shows up after the fact. The app can't tell you a transfer photo is owed until you've already poured at a second pump, and it can't tell you which pump is your "last" one until you've simply stopped working there. Nothing ever announced any of this in the moment; it just appeared later on the Audit tab.
-
-Three changes, none of them touching when a photo actually becomes required - 3.27's quick-job rule is exactly as it was:
-
-- **Picking a different pump on the Pouring tab now says the rule right there**, before you've poured anything: a quick job under 100 units on this pump needs no photo, going past that will ask for a transfer photo once you submit, and going back to your starting pump afterward never asks again. Said once, at the moment it's relevant, instead of a photo request turning up later with no warning.
-- **A plain-language line on the Audit tab** explains what the three checks actually are: Start is your first pump each shift, Transfer is any later pump you stay at past a quick job, End is whichever pump turns out to be your last.
-- **"I'm ending my shift here."** The app can never know your last pump in advance - it can only guess once you've stopped. Rather than wait on that guess, there's now a button that logs the end-of-shift photo for wherever you're standing, the moment you're actually done, without needing the app to have figured it out first.
-- The outstanding-checks banner also updates the instant a pour lands now, rather than up to a minute later on its own poll - a transfer photo that just became owed shows up right away instead of on the next refresh.
 
 ## 3.27 — Wednesday, September 23, 2026
 ### A quick job on another pump doesn't cost two photos any more.
