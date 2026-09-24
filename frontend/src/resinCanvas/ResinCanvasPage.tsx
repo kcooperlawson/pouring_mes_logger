@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Scale } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { resinCanvasApi, type ResinCanvasRow } from '../api/resinCanvas'
 import { fl } from '../theme'
@@ -53,7 +54,7 @@ function AddResinForm() {
 
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">➕ Add New Proprietary Resin Formulation</summary>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">➕ Add New Proprietary Resin Formulation</summary>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="flex flex-col gap-2">
           <select className={input} value={cartType} onChange={(e) => setCartType(e.target.value)}>
@@ -77,7 +78,7 @@ function AddResinForm() {
           </label>
         </div>
       </div>
-      <label className="mt-3 flex items-center gap-2 text-sm text-[#CBD5E1]">
+      <label className="mt-3 flex items-center gap-2 text-sm text-[var(--fl-body)]">
         <input type="checkbox" checked={autoColour} onChange={(e) => setAutoColour(e.target.checked)} />
         Pick the label colour automatically from the name
       </label>
@@ -147,7 +148,7 @@ function EditDeletePanel({ rows }: { rows: ResinCanvasRow[] }) {
 
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">✏️ Edit or Delete Resin Specifications</summary>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">✏️ Edit or Delete Resin Specifications</summary>
       <div className="mt-3 flex flex-col gap-3">
         <select className={input} value={selectedId ?? ''} onChange={(e) => setSelectedId(Number(e.target.value))}>
           {rows.map((r) => <option key={r.id} value={r.id}>{r.resin_name}</option>)}
@@ -155,7 +156,7 @@ function EditDeletePanel({ rows }: { rows: ResinCanvasRow[] }) {
 
         {selected && (
           <>
-            <p className="text-sm text-[#F8FAFC]">
+            <p className="text-sm text-[var(--fl-ink)]">
               Currently shown as{' '}
               <span
                 className="inline-block rounded-full border px-2 py-0.5 text-sm font-semibold"
@@ -218,8 +219,10 @@ export function ResinCanvasPage() {
   const allRows = allQuery.data ?? []
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>⚖️ Formlabs Master Resin Specification Lookup Table</h1>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+        <Scale size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> Master Resin Specification Lookup Table
+      </h1>
 
       <AddResinForm />
 
@@ -274,19 +277,19 @@ export function ResinCanvasPage() {
               <tbody>
                 {rows.map((r) => (
                   <tr key={r.id} className={fl.tableRow}>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.id}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.cartridge_type}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.sku}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.resin_code}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.id}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.cartridge_type}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.sku}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.resin_code}</td>
                     <td className="py-1 pr-2 font-semibold" style={{ backgroundColor: r.color, color: textColorFor(r.color) }}>
                       {r.resin_name}
                     </td>
-                    <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.actual_spec_g}</td>
-                    <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.min_weight_g}</td>
-                    <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.max_weight_g}</td>
-                    <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.target_kg}</td>
-                    <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.multiplier}</td>
-                    <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.lifetime_months}</td>
+                    <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.actual_spec_g}</td>
+                    <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.min_weight_g}</td>
+                    <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.max_weight_g}</td>
+                    <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.target_kg}</td>
+                    <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.multiplier}</td>
+                    <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.lifetime_months}</td>
                   </tr>
                 ))}
               </tbody>

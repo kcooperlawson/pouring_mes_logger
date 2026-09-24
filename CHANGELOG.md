@@ -6,6 +6,15 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.32 — Wednesday, September 23, 2026
+### The visual redesign pass is done - every manager page now matches Cockpit and Live SCADA.
+
+Last batch. Same rule as the four releases before it: nothing here changes what a page shows or does, only how it looks.
+
+**Cartridge Lot Verification, Fleet Production Progress & Work Order Dispatch, Nexus Analytics, Master Resin Specification Lookup, and the Users & Roster tab inside IT Admin** all get icon headers in place of emoji, and every hardcoded text color (`#CBD5E1`, `#F8FAFC`, plain `white`) replaced with the theme variables the rest of the app already uses - the difference that actually matters if this ever runs in a light theme instead of the dark one. Lot Verification and Fleet Production's tab strips get icons instead of bare emoji-and-text. The Users tab's six action panels (Provision, Modify Role, Extra Abilities, Reset PIN, Unlock, Terminate) each get an icon on their own summary line.
+
+That's the whole pass, start to finish: the operator form's Downtime and Packing tabs (3.29), then Historical and Log Management (3.30), Roster and Google Sync (3.31), and this last group of five (3.32) - eleven screens total brought up to the same look, with two shared components (`StepCard`, `Band`) pulled out along the way so the pattern lives in one place instead of getting copied page to page again.
+
 ## 3.31 — Wednesday, September 23, 2026
 ### Roster and Google Sync get the modern look, and the section-divider pattern is shared instead of copied.
 

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Download, Grid3x3, Lock, ShieldAlert, Table2 } from 'lucide-react'
 import { useState } from 'react'
 import { lotVerificationApi, type LotCheck } from '../api/lotVerification'
 import { fl } from '../theme'
@@ -65,10 +66,12 @@ export function LotVerificationPage() {
   const flagged = data?.checks.filter((c) => ['mismatch', 'expired', 'rejected'].includes(c.result)) ?? []
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <div>
-        <h1 className={fl.heading}>🔒 Cartridge Lot Verification</h1>
-        <p className={`text-sm ${fl.muted}`}>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+          <Lock size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> Cartridge Lot Verification
+        </h1>
+        <p className={`mt-1 text-sm ${fl.muted}`}>
           Every lot check completed at a pouring station. The passes are what prove the check actually
           happened; the flags are the mix-ups this gate exists to catch.
         </p>
@@ -93,15 +96,15 @@ export function LotVerificationPage() {
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <div className={tile}>
-              <p className="text-lg font-semibold text-white">{data.totals.checks_logged.toLocaleString()}</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.checks_logged.toLocaleString()}</p>
               <p className={`text-xs ${fl.muted}`}>Checks logged</p>
             </div>
             <div className={tile}>
-              <p className="text-lg font-semibold text-white">{data.totals.full_checks.toLocaleString()}</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.full_checks.toLocaleString()}</p>
               <p className={`text-xs ${fl.muted}`}>Full checks ({data.totals.pct_full.toFixed(0)}%)</p>
             </div>
             <div className={tile}>
-              <p className={`text-lg font-semibold ${data.totals.flagged > 0 ? 'text-red-400' : 'text-white'}`}>
+              <p className={`text-lg font-semibold ${data.totals.flagged > 0 ? 'text-red-400' : 'text-[var(--fl-ink)]'}`}>
                 {data.totals.flagged.toLocaleString()}
               </p>
               <p className={`text-xs ${fl.muted}`}>
@@ -109,27 +112,27 @@ export function LotVerificationPage() {
               </p>
             </div>
             <div className={tile}>
-              <p className="text-lg font-semibold text-white">{data.totals.cartridges_pulled.toLocaleString()}</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.cartridges_pulled.toLocaleString()}</p>
               <p className={`text-xs ${fl.muted}`}>Cartridges pulled</p>
             </div>
             <div className={tile}>
-              <p className="text-lg font-semibold text-white">{data.totals.flag_rate.toFixed(1)}%</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.flag_rate.toFixed(1)}%</p>
               <p className={`text-xs ${fl.muted}`}>Flag rate</p>
             </div>
           </div>
 
           <div className={fl.tabStrip}>
             {([
-              ['flagged', '⛔ Flagged Checks'],
-              ['coverage', '📊 Coverage by Operator'],
-              ['all', '🗂️ Every Check'],
-            ] as const).map(([key, label]) => (
+              ['flagged', 'Flagged Checks', ShieldAlert],
+              ['coverage', 'Coverage by Operator', Grid3x3],
+              ['all', 'Every Check', Table2],
+            ] as const).map(([key, label, Icon]) => (
               <button
                 key={key}
                 onClick={() => setTab(key)}
-                className={tab === key ? fl.tabActive : fl.tabInactive}
+                className={`flex items-center gap-1.5 ${tab === key ? fl.tabActive : fl.tabInactive}`}
               >
-                {label}
+                <Icon size={14} className="shrink-0" /> {label}
               </button>
             ))}
           </div>
@@ -147,7 +150,7 @@ export function LotVerificationPage() {
                       <b style={{ color: TONE[c.result] ?? '#94A3B8' }}>● {HEADLINE[c.result] ?? c.result.toUpperCase()}</b>
                       <span className={`text-xs ${fl.muted}`}>{new Date(c.timestamp).toLocaleString()}</span>
                     </div>
-                    <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-[#CBD5E1]">
+                    <div className="mb-2 flex flex-wrap items-center gap-2 text-sm text-[var(--fl-body)]">
                       <span><Drill f={{ operator: c.operator_name }}>{c.operator_name}</Drill> · <Drill f={{ pump: c.pump_station }}>{c.pump_station}</Drill> · {c.cartridge_type} ·</span>
                       {c.resin_type && c.resin_color ? (
                         <ResinChip name={c.resin_type} color={c.resin_color} />
@@ -155,11 +158,11 @@ export function LotVerificationPage() {
                         <span className={`text-xs ${fl.muted}`}>no resin recorded</span>
                       )}
                     </div>
-                    <p className="text-sm text-[#F8FAFC]">
+                    <p className="text-sm text-[var(--fl-ink)]">
                       <b>Run expected:</b> <code>{c.expected_lot ? <Drill f={{ lot: c.expected_lot }}>{c.expected_lot}</Drill> : '—'}</code><br />
                       <b>Cartridge read:</b> <code>{c.entered_lot ? <Drill f={{ lot: c.entered_lot }}>{c.entered_lot}</Drill> : '—'}</code>
                     </p>
-                    <p className="mt-1 text-sm italic text-[#CBD5E1]">
+                    <p className="mt-1 text-sm italic text-[var(--fl-body)]">
                       {c.reason || 'No reason recorded.'}
                     </p>
                     <p className={`mt-1 text-xs ${fl.muted}`}>
@@ -183,7 +186,7 @@ export function LotVerificationPage() {
           {tab === 'coverage' && (
             <div className="flex flex-col gap-4">
               <div className={card}>
-                <p className="mb-2 text-sm font-semibold text-white">By operator</p>
+                <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">By operator</p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className={fl.tableHead}>
@@ -208,7 +211,7 @@ export function LotVerificationPage() {
                 </div>
               </div>
               <div className={card}>
-                <p className="mb-2 text-sm font-semibold text-white">By station</p>
+                <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">By station</p>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-sm">
                     <thead className={fl.tableHead}>
@@ -232,9 +235,9 @@ export function LotVerificationPage() {
           {tab === 'all' && (
             <div className={card}>
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-sm font-semibold text-white">Every check</p>
-                <button onClick={() => downloadCsv(data.checks, days)} className={fl.btnSecondary}>
-                  ⬇️ Export this window as CSV
+                <p className="text-sm font-semibold text-[var(--fl-ink)]">Every check</p>
+                <button onClick={() => downloadCsv(data.checks, days)} className={`flex items-center gap-1.5 ${fl.btnSecondary}`}>
+                  <Download size={14} className="shrink-0" /> Export this window as CSV
                 </button>
               </div>
               <div className="overflow-x-auto">

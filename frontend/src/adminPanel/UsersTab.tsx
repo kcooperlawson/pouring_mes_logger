@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, KeyRound, Ticket, Unlock, UserCog, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { adminApi, type AdminUser } from '../api/admin'
 import { fl } from '../theme'
@@ -29,7 +30,7 @@ function ProvisionForm({ onCreated }: { onCreated: () => void }) {
 
   return (
     <div className={`${card} flex flex-col gap-2`}>
-      <p className="text-sm font-semibold text-white">➕ Provision New User</p>
+      <p className="flex items-center gap-1.5 text-sm font-semibold text-[var(--fl-ink)]"><UserPlus size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Provision New User</p>
       <input className={input} placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
       <input className={input} placeholder="Work Email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input className={input} placeholder="Username / ID" value={username} onChange={(e) => setUsername(e.target.value)} />
@@ -54,7 +55,7 @@ function ProvisionForm({ onCreated }: { onCreated: () => void }) {
 function RosterTable({ users }: { users: AdminUser[] }) {
   return (
     <div className={card}>
-      <p className="mb-2 text-sm font-semibold text-white">📋 Current Staff Database</p>
+      <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[var(--fl-ink)]"><Users size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Current Staff Database</p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
           <thead className={fl.tableHead}>
@@ -68,12 +69,12 @@ function RosterTable({ users }: { users: AdminUser[] }) {
           <tbody>
             {users.map((u) => (
               <tr key={u.id} className={fl.tableRow}>
-                <td className="py-1 pr-2 text-[#CBD5E1]">{u.id}</td>
-                <td className="py-1 pr-2 text-[#CBD5E1]">{u.full_name}</td>
-                <td className="py-1 pr-2 text-[#CBD5E1]">{u.username}</td>
-                <td className="py-1 pr-2 text-[#CBD5E1]">{u.email}</td>
-                <td className="py-1 pr-2 text-[#CBD5E1]">{u.role}</td>
-                <td className="py-1 pr-2 text-[#CBD5E1]">{u.shift}</td>
+                <td className="py-1 pr-2 text-[var(--fl-body)]">{u.id}</td>
+                <td className="py-1 pr-2 text-[var(--fl-body)]">{u.full_name}</td>
+                <td className="py-1 pr-2 text-[var(--fl-body)]">{u.username}</td>
+                <td className="py-1 pr-2 text-[var(--fl-body)]">{u.email}</td>
+                <td className="py-1 pr-2 text-[var(--fl-body)]">{u.role}</td>
+                <td className="py-1 pr-2 text-[var(--fl-body)]">{u.shift}</td>
                 <td className="py-1 pr-2">
                   {u.is_locked
                     ? <span className="text-xs font-semibold text-red-400">🔒 Locked ({u.locked_minutes_left}m)</span>
@@ -98,7 +99,7 @@ function ModifyRoleShift({ users, onDone }: { users: AdminUser[]; onDone: () => 
   })
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">🛠️ Modify User Role &amp; Shift Assignment</summary>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[var(--fl-ink)]"><UserCog size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Modify User Role &amp; Shift Assignment</summary>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <select className={select} value={userId} onChange={(e) => setUserId(Number(e.target.value))}>
           <option value="">— choose —</option>
@@ -134,7 +135,7 @@ function AbilitiesPanel({ users }: { users: AdminUser[] }) {
 
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">🎟️ Extra Abilities</summary>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[var(--fl-ink)]"><Ticket size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Extra Abilities</summary>
       <p className={`mt-2 text-xs ${fl.muted}`}>
         Give one account something its role does not include. The person keeps their role everywhere else.
       </p>
@@ -145,7 +146,7 @@ function AbilitiesPanel({ users }: { users: AdminUser[] }) {
 
       {sheet && (
         <div className="mt-3 flex flex-col gap-3">
-          <p className="text-sm text-white">
+          <p className="text-sm text-[var(--fl-ink)]">
             <b>{sheet.full_name}</b> — role <code className="text-[#F97316]">{sheet.role}</code>
           </p>
           <div className="flex flex-col gap-1.5">
@@ -154,7 +155,7 @@ function AbilitiesPanel({ users }: { users: AdminUser[] }) {
               const checked = a.status !== ''
               const disabled = heldByRole || !a.can_grant
               return (
-                <label key={a.key} className="flex items-start gap-2 text-sm text-[#CBD5E1]" title={a.help}>
+                <label key={a.key} className="flex items-start gap-2 text-sm text-[var(--fl-body)]" title={a.help}>
                   <input
                     type="checkbox" className="mt-0.5" checked={checked} disabled={disabled}
                     onChange={(e) => {
@@ -174,7 +175,7 @@ function AbilitiesPanel({ users }: { users: AdminUser[] }) {
 
           {sheet.history.length > 0 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#94A3B8]">History</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--fl-body)]">History</p>
               <ul className="mt-1 flex flex-col gap-0.5">
                 {sheet.history.slice(0, 12).map((h, i) => (
                   <li key={i} className={`text-xs ${fl.muted}`}>
@@ -198,7 +199,7 @@ function ResetPinPanel({ users, onDone }: { users: AdminUser[]; onDone: () => vo
   const mutation = useMutation({ mutationFn: () => adminApi.resetPin(userId as number, pin), onSuccess: () => { setPin(''); onDone() } })
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">🔑 Reset User PIN</summary>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[var(--fl-ink)]"><KeyRound size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Reset User PIN</summary>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <select className={select} value={userId} onChange={(e) => setUserId(Number(e.target.value))}>
           <option value="">— choose —</option>
@@ -220,7 +221,7 @@ function UnlockPanel({ users, onDone }: { users: AdminUser[]; onDone: () => void
   const mutation = useMutation({ mutationFn: () => adminApi.unlockUser(userId as number), onSuccess: onDone })
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">🔓 Unlock Account</summary>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[var(--fl-ink)]"><Unlock size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Unlock Account</summary>
       {locked.length === 0 ? (
         <p className={`mt-2 text-xs ${fl.muted}`}>No accounts are currently locked out.</p>
       ) : (
@@ -245,7 +246,7 @@ function TerminatePanel({ users, currentUsername, onDone }: { users: AdminUser[]
   const isSelf = target?.username === currentUsername
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">⚠️ Terminate Account</summary>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-red-300"><AlertTriangle size={15} className="shrink-0" /> Terminate Account</summary>
       <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <select className={select} value={userId} onChange={(e) => setUserId(Number(e.target.value))}>
           <option value="">— choose —</option>

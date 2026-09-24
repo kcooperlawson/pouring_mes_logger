@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { CheckCircle2, Rocket, Target } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { assignedRunsApi, type AssignedRun } from '../api/assignedRuns'
 import { referenceApi } from '../api/reference'
@@ -87,10 +88,10 @@ function DispatchForm() {
 
   return (
     <details className={card} open>
-      <summary className="cursor-pointer text-sm font-medium text-white">➕ Create &amp; Assign New Work Order</summary>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">➕ Create &amp; Assign New Work Order</summary>
       <div className="mt-3 flex flex-col gap-4">
         {options?.enable_packing ? (
-          <div className="flex gap-4 text-sm text-[#CBD5E1]">
+          <div className="flex gap-4 text-sm text-[var(--fl-body)]">
             {(['Pouring', 'Packing'] as const).map((t) => (
               <label key={t} className="flex items-center gap-1.5">
                 <input type="radio" checked={runType === t} onChange={() => setRunType(t)} />
@@ -228,12 +229,12 @@ function RunCard({ run }: { run: AssignedRun }) {
           <span className="text-xs font-bold text-[#F97316]">[{run.cartridge_type}]</span>
         </div>
         <div className={`text-xs ${fl.muted}`}>
-          🛢️ <b className="text-[#CBD5E1]"><Drill f={{ reactor: run.reactor_id }}>{run.reactor_id}</Drill></b> ({run.reactor_size_l.toLocaleString()} L) &nbsp;|&nbsp; 🏷️ <b className="text-[#CBD5E1]"><Drill f={{ pump: run.pump_station }}>{run.pump_station}</Drill></b> &nbsp;|&nbsp; 👤 <b className="text-[#CBD5E1]"><Drill f={{ operator: run.assigned_operator }}>{run.assigned_operator}</Drill></b>
+          🛢️ <b className="text-[var(--fl-body)]"><Drill f={{ reactor: run.reactor_id }}>{run.reactor_id}</Drill></b> ({run.reactor_size_l.toLocaleString()} L) &nbsp;|&nbsp; 🏷️ <b className="text-[var(--fl-body)]"><Drill f={{ pump: run.pump_station }}>{run.pump_station}</Drill></b> &nbsp;|&nbsp; 👤 <b className="text-[var(--fl-body)]"><Drill f={{ operator: run.assigned_operator }}>{run.assigned_operator}</Drill></b>
         </div>
       </div>
 
       <p className={`mb-1 text-xs ${fl.muted}`}>
-        Output: <b className="text-[#F8FAFC]"><Drill f={{ run_id: run.id }} title="Every log counted toward this run">{run.current_units.toLocaleString()} / {run.target_units.toLocaleString()}</Drill></b> Units ({pct.toFixed(1)}%) &nbsp;|&nbsp; Lot: {run.lot_number ? <Drill f={{ lot: run.lot_number }}>{run.lot_number}</Drill> : 'N/A'}
+        Output: <b className="text-[var(--fl-ink)]"><Drill f={{ run_id: run.id }} title="Every log counted toward this run">{run.current_units.toLocaleString()} / {run.target_units.toLocaleString()}</Drill></b> Units ({pct.toFixed(1)}%) &nbsp;|&nbsp; Lot: {run.lot_number ? <Drill f={{ lot: run.lot_number }}>{run.lot_number}</Drill> : 'N/A'}
       </p>
       <LayerBar pct={pct} />
 
@@ -326,16 +327,16 @@ function CompletedTab({ runs }: { runs: AssignedRun[] }) {
               <tbody>
                 {filtered.map((r) => (
                   <tr key={r.id} className={fl.tableRow}>
-                    <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ run_id: r.id }}>#{r.id}</Drill></td>
-                    <td className="py-1 pr-2 whitespace-nowrap text-[#CBD5E1]">{new Date(r.created_at).toLocaleString()}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.run_type}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ run_id: r.id }}>#{r.id}</Drill></td>
+                    <td className="py-1 pr-2 whitespace-nowrap text-[var(--fl-body)]">{new Date(r.created_at).toLocaleString()}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.run_type}</td>
                     <td className="py-1 pr-2" style={{ backgroundColor: r.resin_color, color: '#111827' }}>{r.resin_type}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.cartridge_type}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ lot: r.lot_number }}>{r.lot_number}</Drill></td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]">{r.target_units.toLocaleString()}</td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ run_id: r.id }}>{r.current_units.toLocaleString()}</Drill></td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ operator: r.assigned_operator }}>{r.assigned_operator}</Drill></td>
-                    <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ pump: r.pump_station }}>{r.pump_station}</Drill></td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.cartridge_type}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ lot: r.lot_number }}>{r.lot_number}</Drill></td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]">{r.target_units.toLocaleString()}</td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ run_id: r.id }}>{r.current_units.toLocaleString()}</Drill></td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ operator: r.assigned_operator }}>{r.assigned_operator}</Drill></td>
+                    <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ pump: r.pump_station }}>{r.pump_station}</Drill></td>
                   </tr>
                 ))}
               </tbody>
@@ -345,7 +346,7 @@ function CompletedTab({ runs }: { runs: AssignedRun[] }) {
       )}
 
       <details className={card}>
-        <summary className="cursor-pointer text-sm font-medium text-white">🗑️ Delete a Completed Work Order</summary>
+        <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">🗑️ Delete a Completed Work Order</summary>
         <p className={`mt-2 text-xs ${fl.muted}`}>
           Permanently removes this archived Work Order. This does NOT delete the underlying production logs
           that were poured/packed against it.
@@ -389,25 +390,27 @@ export function AssignedRunsPage() {
   const doneRuns = data?.runs.filter((r) => r.status === 'Done') ?? []
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>🎯 Fleet Production Progress &amp; Work Order Dispatch</h1>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+        <Target size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> Fleet Production Progress &amp; Work Order Dispatch
+      </h1>
 
       {data && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.total_actual.toLocaleString()} / {data.totals.total_target.toLocaleString()}</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.total_actual.toLocaleString()} / {data.totals.total_target.toLocaleString()}</p>
             <p className={`text-xs ${fl.muted}`}>Fleet Progress ({data.totals.fleet_pct.toFixed(1)}%)</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.active_count} Active</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.active_count} Active</p>
             <p className={`text-xs ${fl.muted}`}>{data.totals.queued_count} Queued | {data.totals.done_count} Done</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.pumps_configured} Configured</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.pumps_configured} Configured</p>
             <p className={`text-xs ${fl.muted}`}>{data.totals.pumps_in_use} In Use</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.active_operators_count} Ready</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.active_operators_count} Ready</p>
             <p className={`text-xs ${fl.muted}`}>Active Operators</p>
           </div>
         </div>
@@ -416,9 +419,12 @@ export function AssignedRunsPage() {
       <DispatchForm />
 
       <div className={fl.tabStrip}>
-        {([['active', '🚀 Active & Queued Runs'], ['completed', '✅ Completed Work Orders']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={tab === key ? fl.tabActive : fl.tabInactive}>
-            {label}
+        {([
+          ['active', 'Active & Queued Runs', Rocket],
+          ['completed', 'Completed Work Orders', CheckCircle2],
+        ] as const).map(([key, label, Icon]) => (
+          <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-1.5 ${tab === key ? fl.tabActive : fl.tabInactive}`}>
+            <Icon size={14} className="shrink-0" /> {label}
           </button>
         ))}
       </div>

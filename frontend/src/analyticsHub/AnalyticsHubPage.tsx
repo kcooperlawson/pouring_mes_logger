@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { Sparkles } from 'lucide-react'
 import { analyticsApi, type DowntimeReason, type HeatmapCell, type OperatorAccuracy, type ResinOutput, type TrendPoint, type WeightReading } from '../api/analytics'
 import { fl } from '../theme'
 import { Drill } from '../drill/DrillContext'
@@ -19,11 +20,11 @@ function KpiCard({
   const toneClass =
     trend.tone === 'up' ? 'bg-[#10B981]/20 text-[#10B981]'
     : trend.tone === 'down' ? 'bg-[#EF4444]/20 text-[#EF4444]'
-    : 'bg-white/10 text-[#CBD5E1]'
+    : 'bg-white/10 text-[var(--fl-body)]'
   return (
     <div className={card}>
       <p className={`text-[0.7rem] font-extrabold uppercase tracking-widest ${fl.muted}`}>{title}</p>
-      <p className={`my-1 text-3xl font-black ${valueColor ?? 'text-white'}`}>{value}</p>
+      <p className={`my-1 text-3xl font-black ${valueColor ?? 'text-[var(--fl-ink)]'}`}>{value}</p>
       <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-extrabold ${toneClass}`}>{trend.label}</span>
     </div>
   )
@@ -86,7 +87,7 @@ function Donut({ data, total }: { data: ResinOutput[]; total: number }) {
           </g>
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xl font-black text-white">{total.toLocaleString()}</span>
+          <span className="text-xl font-black text-[var(--fl-ink)]">{total.toLocaleString()}</span>
           <span className={`text-[0.6rem] uppercase ${fl.muted}`}>Total</span>
         </div>
       </div>
@@ -114,7 +115,7 @@ function ParetoBars({ data }: { data: DowntimeReason[] }) {
           <div className="h-4 flex-1 overflow-hidden rounded bg-[#0F172A]">
             <div className="h-full rounded bg-[#A855F7]" style={{ width: `${(d.minutes / max) * 100}%` }} />
           </div>
-          <span className="w-14 shrink-0 text-right font-medium text-white">{d.minutes.toFixed(0)}m</span>
+          <span className="w-14 shrink-0 text-right font-medium text-[var(--fl-ink)]">{d.minutes.toFixed(0)}m</span>
         </div>
       ))}
     </div>
@@ -233,7 +234,7 @@ function OperatorAccuracyBars({ data }: { data: OperatorAccuracy[] }) {
                 style={over ? { left: '50%', width: `${widthPct}%` } : { right: '50%', width: `${widthPct}%` }}
               />
             </div>
-            <span className="w-14 shrink-0 text-right font-medium text-white" title="How far off a typical reading is, either direction">
+            <span className="w-14 shrink-0 text-right font-medium text-[var(--fl-ink)]" title="How far off a typical reading is, either direction">
               ±{d.mean_abs_deviation.toFixed(1)}g
             </span>
             <span
@@ -278,7 +279,9 @@ export function AnalyticsHubPage() {
     // share one page width instead of three.
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className={fl.heading}>🌌 Nexus Analytics</h1>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+          <Sparkles size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> Nexus Analytics
+        </h1>
         <span className="rounded-lg border border-[#A855F7]/30 bg-[#A855F7]/10 px-3 py-1.5 text-xs font-bold uppercase tracking-widest text-[#A78BFA]">
           Rolling 7-Day Intelligence
         </span>
@@ -287,11 +290,11 @@ export function AnalyticsHubPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#00D2FF]/20 bg-[#00D2FF]/5 px-5 py-3">
         <div>
           <p className="text-[0.7rem] font-extrabold uppercase tracking-widest text-[#00D2FF]">Live Daily Expectation (Ticking)</p>
-          <p className="text-2xl font-black text-white">{live_ticker.expected_now_l.toLocaleString()} L</p>
+          <p className="text-2xl font-black text-[var(--fl-ink)]">{live_ticker.expected_now_l.toLocaleString()} L</p>
         </div>
         <div className="text-right">
           <p className="text-[0.7rem] font-extrabold uppercase tracking-widest text-[#A855F7]">Self-Adjusting Daily Projection</p>
-          <p className="text-2xl font-black text-white">{live_ticker.projected_daily_l.toLocaleString()} L</p>
+          <p className="text-2xl font-black text-[var(--fl-ink)]">{live_ticker.projected_daily_l.toLocaleString()} L</p>
         </div>
       </div>
 
@@ -316,7 +319,7 @@ export function AnalyticsHubPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className={`${card} lg:col-span-2`}>
-          <p className="mb-2 text-sm font-semibold text-white">📈 Production Velocity Stream</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">📈 Production Velocity Stream</p>
           {velocity_trend.length > 0 ? (
             <VelocityArea points={velocity_trend} />
           ) : (
@@ -324,7 +327,7 @@ export function AnalyticsHubPage() {
           )}
         </div>
         <div className={card}>
-          <p className="mb-2 text-sm font-semibold text-white">🧪 Formulation Output</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">🧪 Formulation Output</p>
           {formulation_output.length > 0 ? (
             <Donut data={formulation_output} total={kpis.total_poured_7d} />
           ) : (
@@ -335,7 +338,7 @@ export function AnalyticsHubPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className={card}>
-          <p className="mb-2 text-sm font-semibold text-white">⚠️ Downtime Pareto</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">⚠️ Downtime Pareto</p>
           {downtime_pareto.length > 0 ? (
             <ParetoBars data={downtime_pareto} />
           ) : (
@@ -343,7 +346,7 @@ export function AnalyticsHubPage() {
           )}
         </div>
         <div className={`${card} lg:col-span-2`}>
-          <p className="mb-2 text-sm font-semibold text-white">👥 Operator Contribution Matrix</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">👥 Operator Contribution Matrix</p>
           {operator_matrix.length > 0 ? (
             <Heatmap cells={operator_matrix} operators={top_operators} />
           ) : (
@@ -353,11 +356,11 @@ export function AnalyticsHubPage() {
       </div>
 
       <div className={card}>
-        <p className="mb-3 text-sm font-semibold text-white">⚖️ Fill weight accuracy — by operator</p>
+        <p className="mb-3 text-sm font-semibold text-[var(--fl-ink)]">⚖️ Fill weight accuracy — by operator</p>
         {!fill_weight.has_readings ? (
           <p className={`text-sm ${fl.muted}`}>
             No check weights recorded yet. The pouring form has an optional{' '}
-            <strong className="text-[#CBD5E1]">Check weight (g)</strong> box — one reading an hour is enough to
+            <strong className="text-[var(--fl-body)]">Check weight (g)</strong> box — one reading an hour is enough to
             show how close each person's fills are landing to target, who is consistently heavy or light, and how
             much resin that is costing.
           </p>
@@ -365,21 +368,21 @@ export function AnalyticsHubPage() {
           <>
             <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className={tile}>
-                <p className="text-lg font-semibold text-white">{fill_weight.samples.toLocaleString()}</p>
+                <p className="text-lg font-semibold text-[var(--fl-ink)]">{fill_weight.samples.toLocaleString()}</p>
                 <p className={`text-xs ${fl.muted}`}>Readings taken</p>
               </div>
               <div className={tile}>
-                <p className="text-lg font-semibold text-white">{fill_weight.in_band_pct}</p>
+                <p className="text-lg font-semibold text-[var(--fl-ink)]">{fill_weight.in_band_pct}</p>
                 <p className={`text-xs ${fl.muted}`}>In band</p>
               </div>
               <div className={tile}>
-                <p className="text-lg font-semibold text-white">
+                <p className="text-lg font-semibold text-[var(--fl-ink)]">
                   {fill_weight.mean_deviation > 0 ? '+' : ''}{fill_weight.mean_deviation.toFixed(1)} g
                 </p>
                 <p className={`text-xs ${fl.muted}`}>Mean deviation</p>
               </div>
               <div className={tile}>
-                <p className="text-lg font-semibold text-white">
+                <p className="text-lg font-semibold text-[var(--fl-ink)]">
                   {fill_weight.kg_above_target > 0 ? '+' : ''}{fill_weight.kg_above_target.toFixed(1)} kg
                 </p>
                 <p className={`text-xs ${fl.muted}`}>Resin above target</p>
@@ -393,7 +396,7 @@ export function AnalyticsHubPage() {
                 <OperatorAccuracyBars data={fill_weight.by_operator} />
                 <p className={`mt-2 text-[0.7rem] ${fl.muted}`}>
                   Bar is the average bias against target (right of centre is heavy) and ± is how far off a typical
-                  reading is either way. <strong className="text-[#CBD5E1]">vs pump</strong> is the fair one: the
+                  reading is either way. <strong className="text-[var(--fl-body)]">vs pump</strong> is the fair one: the
                   same readings with each pump's own habit subtracted, so it says heavier or lighter than everybody
                   else on that same equipment. It reads — until a pump has been weighed on by more than one person.
                   Then the share in band and the number of readings. Clicking a name shows which pumps they came
