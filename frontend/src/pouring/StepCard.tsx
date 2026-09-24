@@ -7,10 +7,10 @@ import { fl } from '../theme'
 // switching apps. Started life duplicated inside PouringTab; pulled out here
 // once Downtime and Packing needed the exact same shape.
 export function Step({
-  n, title, done, children, hint,
-}: { n: number; title: string; done?: boolean; children: ReactNode; hint?: string }) {
+  n, title, done, children, hint, tourId,
+}: { n: number; title: string; done?: boolean; children: ReactNode; hint?: string; tourId?: string }) {
   return (
-    <section className={`${fl.card} ${done ? 'border-emerald-700/50' : ''}`}>
+    <section data-tour={tourId} className={`${fl.card} ${done ? 'border-emerald-700/50' : ''}`}>
       <div className="mb-2 flex items-center gap-2">
         <span
           className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-extrabold transition ${

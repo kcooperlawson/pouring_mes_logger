@@ -29,3 +29,4 @@ class UserOut(BaseModel):
     preferred_theme: str | None = None
     avatar_filename: str | None = None
     abilities: list[str] = []
+    tour_seen: bool = True

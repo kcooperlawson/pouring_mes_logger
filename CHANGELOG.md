@@ -6,6 +6,15 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.33 — Wednesday, September 23, 2026
+### An interactive guide walks anyone new through their first shift, and two real timing bugs got fixed.
+
+**A guided tour, for anyone who has never used this before.** Getting ready for second shift to start using this for real - built around the honest answer to "what happens if nobody explains it to them." It auto-launches the first time a brand-new account signs in, highlighting one thing at a time with a spotlight and a Next button: for an operator or packer, that's who you are, the operator guide PDF, the startup checklist, Pouring or Packing, Downtime, your photo checks, your Summary, and where to sign out. For a manager or admin, it's the Manager Cockpit's daily rounds, today's numbers, Live SCADA, IT Admin, and the operations handbook. It skips - automatically, silently - anything that doesn't apply right now (a packer has no Pouring tab; an operator who already finished their checklist has no Step 1 card to show), so it never stalls on something that isn't there. "Take the interactive tour" in Account & Preferences runs it again any time, for a refresher or for someone who skipped it the first time.
+
+Found and fixed while building it: the retry logic that lets a step skip past something not on screen was counting animation frames, and `requestAnimationFrame` gets throttled hard - sometimes to nothing at all - the moment a browser tab isn't the frontmost one. On a real phone that's normal multitasking; here it meant a step could stall silently instead of skipping. Switched to a plain wall-clock timer, which doesn't care whether the tab has focus.
+
+**The wall display was reading its own clock, not the plant's.** Confirmed while making sure everything's solid for two shifts: every other shift calculation in the app already converts to the plant's own timezone rather than trusting the server's raw clock - a lesson learned once already, written up in `shift_clock.py`'s own notes - but the TV dashboard's KPI numbers had their own separate, older calculation that never got the same fix. If the plant PC's clock ever drifts from the plant's actual local time, the wall display could show the wrong shift as active while every other screen showing the correct one. Same fix, one more place: reads the plant's timezone now, not the machine's.
+
 ## 3.32 — Wednesday, September 23, 2026
 ### The visual redesign pass is done - every manager page now matches Cockpit and Live SCADA.
 

@@ -250,7 +250,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
           ↩️ Same as last hour ({lastEntryQuery.data.pump_station} · {lastEntryQuery.data.resin_type})
         </button>
       )}
-      <Step n={1} title="Station & material" done={!!(station && resin && cartCode)}
+      <Step n={1} tourId="pouring-step-1" title="Station & material" done={!!(station && resin && cartCode)}
             hint={station && resin && cartCode ? undefined : 'pick all three'}>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
@@ -315,7 +315,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
 
       {station && resin && cartCode && (
         <>
-          <Step n={2} title="Lot check" done={gateOk} hint={gateOk ? undefined : 'read the container'}>
+          <Step n={2} tourId="pouring-step-2" title="Lot check" done={gateOk} hint={gateOk ? undefined : 'read the container'}>
           <LotVerificationGate
             station={station}
             resin={resin}
@@ -329,7 +329,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
           />
           </Step>
 
-          <Step n={3} title="What you poured" done={(isBulk ? bulk.containers : bottlesFilled) > 0}>
+          <Step n={3} tourId="pouring-step-3" title="What you poured" done={(isBulk ? bulk.containers : bottlesFilled) > 0}>
           <ProductionOutputFields
             station={station}
             resin={resin}

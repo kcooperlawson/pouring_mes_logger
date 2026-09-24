@@ -108,7 +108,7 @@ function DailyRounds({ onNavigate, canSee, canAdminister }: {
   const nothingGranted = !canSee('checks') && !canSee('scada') && !canAdminister
 
   return (
-    <section className="flex flex-col gap-2.5">
+    <section data-tour="daily-rounds" className="flex flex-col gap-2.5">
       <div className="flex items-center gap-3">
         <h2 className="flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--fl-body)]">
           <Compass size={14} className="shrink-0 text-[var(--fl-accent-2)]" /> Daily rounds
@@ -187,7 +187,7 @@ function TodayStrip({ onNavigate, canSeeChecks }: { onNavigate: (tab: TabKey) =>
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div data-tour="today-strip" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {tiles.map((tile, i) => {
         const body = (
           <div
@@ -263,7 +263,7 @@ function LaunchCard({
   )
 }
 
-function Section({ title, icon: Icon, caption, children }: { title: string; icon: LucideIcon; caption?: string; children: ReactNode }) {
+function Section({ title, icon: Icon, caption, children, tourId }: { title: string; icon: LucideIcon; caption?: string; children: ReactNode; tourId?: string }) {
   // A card dropped by canSee()/canAdminister comes through as a literal
   // `false` child - toArray() strips those before this ever counts them, so
   // a section left with nothing a person can actually open doesn't draw its
@@ -274,7 +274,7 @@ function Section({ title, icon: Icon, caption, children }: { title: string; icon
   if (cards.length === 0) return null
 
   return (
-    <section className="flex flex-col gap-3">
+    <section data-tour={tourId} className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <h2 className="flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--fl-body)]">
           <Icon size={14} className="shrink-0 text-[var(--fl-accent-2)]" /> {title}
@@ -330,7 +330,7 @@ export function ManagerCockpitHub({
 
       <TodayStrip onNavigate={onNavigate} canSeeChecks={canSee('checks')} />
 
-      <Section title="What was poured" icon={Droplets}>
+      <Section title="What was poured" icon={Droplets} tourId="what-was-poured">
         {canSee('historical') && (
           <LaunchCard label="Historical Production Trends" icon={TrendingUp} onClick={() => onNavigate('historical')}
                       caption="Output over time, by pump, resin and person." />

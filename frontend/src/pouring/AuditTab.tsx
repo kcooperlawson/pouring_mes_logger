@@ -117,7 +117,7 @@ export function AuditTab({
       </div>
 
       {!logging && (
-        <div className="flex flex-col gap-2">
+        <div data-tour="audit-checks" className="flex flex-col gap-2">
           <CheckCard kind="start" at={myRow?.start_audit_at ?? null} expected={myRow?.start_expected ?? true}
                     onLog={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.start, station: myStation })} />
           <CheckCard kind="transfer" at={myRow?.transfer_audit_at ?? null} expected={myRow?.transfer_expected ?? false}

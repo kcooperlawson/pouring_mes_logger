@@ -217,7 +217,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
       <h3 className="text-sm font-semibold text-[var(--fl-ink)]">📋 Daily Startup Checklist</h3>
 
       {!cleanlinessDone || reopened ? (
-        <div className={panel}>
+        <div data-tour="checklist-step-1" className={panel}>
           <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 1: Start-of-shift photo</p>
           {cleanlinessDone && (
             <p className="mb-2 text-xs text-emerald-400">
@@ -263,7 +263,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
         </p>
       )}
 
-      <div className={panel}>
+      <div data-tour="checklist-step-2" className={panel}>
         <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 2: Final Verification</p>
         <label className={`mb-2 flex items-center gap-2 text-sm transition-colors ${qrChecked ? 'text-emerald-300' : 'text-[var(--fl-body)]'}`}>
           <input type="checkbox" checked={qrChecked} onChange={(e) => setQrChecked(e.target.checked)} />

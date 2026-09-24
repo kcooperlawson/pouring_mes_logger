@@ -94,3 +94,12 @@ def logout(request: Request, response: Response):
 @router.get("/me", response_model=UserOut)
 def me(user: dict = Depends(get_current_user)):
     return {**user, "abilities": crud.effective_abilities(user["id"], user["role"])}
+
+
+@router.post("/tour-seen", status_code=204)
+def tour_seen(user: dict = Depends(get_current_user)):
+    """The interactive guide finished, was skipped, or was closed early - any
+    of those count as "shown", the same as ticking a checklist step you
+    already know how to do. It never auto-launches again after this; the
+    "Take the tour" button is what a refresher runs off of instead."""
+    crud.mark_tour_seen(user["id"])

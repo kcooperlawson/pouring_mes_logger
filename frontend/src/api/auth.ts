@@ -10,6 +10,7 @@ export interface User {
   preferred_theme: string | null
   avatar_filename: string | null
   abilities: string[]
+  tour_seen: boolean
 }
 
 export interface LoginRequest {
@@ -33,4 +34,5 @@ export const authApi = {
   logout: () => api.post<void>('/auth/logout'),
   register: (body: RegisterRequest) => api.post<{ ok: boolean }>('/auth/register', body),
   mode: () => api.get<{ simple_mode: boolean }>('/auth/mode'),
+  tourSeen: () => api.post<void>('/auth/tour-seen'),
 }

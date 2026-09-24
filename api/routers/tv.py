@@ -3,13 +3,18 @@ number board a TV on the floor shows: today's pace against target, the top
 pourers, the packing breakdown, and active work orders.
 
 Two independent notions of "the current shift" exist here on purpose, exactly
-as the original page has them: `active_shift` (naive datetime.now(), no
-operating-days awareness - simple wall-clock math against the shift start
-times) drives every KPI card, while shift_clock.compute_shift_status (the
-operating-days-aware version used everywhere else) feeds ONLY the stalled-
-record health alarm. Collapsing them into one would be a real behavior change,
-not a cleanup - ported byte-for-byte for fidelity, same as Analytics Hub's
-live ticker.
+as the original page has them: `active_shift` (simple wall-clock math against
+the shift start times, no operating-days awareness) drives every KPI card,
+while shift_clock.compute_shift_status (the operating-days-aware version used
+everywhere else) feeds ONLY the stalled-record health alarm. Collapsing them
+into one algorithm would be a real behavior change, not a cleanup - ported
+byte-for-byte for fidelity, same as Analytics Hub's live ticker.
+
+Both now read the plant's own clock (PLANT_TZ), not the server's raw one -
+`active_shift` used to call datetime.now() straight, so a wall display on a
+PC whose system clock drifted from the plant's local time could show the
+wrong shift as active without either the wall display or the (correctly
+timezone-aware) health alarm ever disagreeing loudly enough to notice.
 
 The 10-second auto-refresh becomes a plain refetchInterval on the frontend;
 the "screen sweep" arrival animation and the one-shot "build complete" finale
@@ -28,7 +33,7 @@ from api.schemas.tv import (PackingBreakdownRow, TopPourer, TvHealth, TvOverview
                             WorkOrderRow)
 from record_health import record_state
 from resin_palette import resin_color_map, stored_color_map
-from shift_clock import compute_shift_status
+from shift_clock import PLANT_TZ, compute_shift_status
 
 router = APIRouter(prefix="/tv", tags=["tv"])
 
@@ -75,7 +80,7 @@ def overview(mode: str = "auto", user: dict = Depends(require_role("manager", "a
     total_poured = int(df_today_pour["bottles_filled"].sum()) if not df_today_pour.empty else 0
     total_packed = int(df_today_pack["bottles_filled"].sum()) if not df_today_pack.empty else 0
 
-    time_now = datetime.now()
+    time_now = datetime.now(PLANT_TZ)
     s1_h, s1_m = map(int, settings["shift_1_start"].split(":"))
     s2_h, s2_m = map(int, settings["shift_2_start"].split(":"))
     shift_1_start = time_now.replace(hour=s1_h, minute=s1_m, second=0)

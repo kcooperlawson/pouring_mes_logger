@@ -1,7 +1,7 @@
 
 
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Date, Text, ForeignKey, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime, date
 from db_core import Base
@@ -31,6 +31,12 @@ class User(Base):
     last_station = Column(String(50), nullable=True)
     last_cartridge = Column(String(60), nullable=True)
     last_resin = Column(String(100), nullable=True)
+    # False only for an account that has genuinely never seen the interactive
+    # guide - the migration backfills every existing account to True, and the
+    # Python-side default here (not the migration's server_default, which
+    # only exists for that one-time backfill) is what a brand new account
+    # actually gets.
+    tour_seen = Column(Boolean, default=False, nullable=False)
 
 
 class UserAbility(Base):

@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   AlertTriangle, BarChart3, Camera, FlaskConical, HelpCircle, Package, Radio,
   Settings, Wrench, type LucideIcon,
@@ -6,6 +6,7 @@ import {
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { accountApi } from './api/account'
+import { authApi } from './api/auth'
 import { referenceApi } from './api/reference'
 import { useAuth } from './auth/AuthProvider'
 import { CelebrationLayer } from './shell/Celebrate'
@@ -25,6 +26,9 @@ import { DowntimeTab } from './pouring/DowntimeTab'
 import { PackingTab } from './pouring/PackingTab'
 import { PouringTab } from './pouring/PouringTab'
 import { SummaryTab } from './pouring/SummaryTab'
+import { TourOverlay } from './tour/TourOverlay'
+import { onTourRequest } from './tour/tourLaunch'
+import { operatorTourSteps } from './tour/steps'
 
 type TabKey = 'pouring' | 'packing' | 'downtime' | 'audit' | 'summary'
 
@@ -122,6 +126,30 @@ export function OperatorFormPage() {
     startOfflineQueue()
   }, [])
 
+  const queryClient = useQueryClient()
+  const [touring, setTouring] = useState(false)
+  const tourSeenMutation = useMutation({ mutationFn: authApi.tourSeen })
+
+  // Auto-launches once for an account that has genuinely never seen it
+  // (tour_seen is False only for a brand-new account, or one an admin reset
+  // it for) - never again after this runs once, whether finished or skipped.
+  useEffect(() => {
+    if (user && user.tour_seen === false) setTouring(true)
+  }, [user?.id])
+
+  // The manual "Take the tour" button lives in AccountPanel, a sibling
+  // rather than a child of this page - see tour/tourLaunch.ts for why this
+  // is a tiny pub/sub instead of a prop threaded down to it.
+  useEffect(() => onTourRequest(() => { setShowAccount(false); setTouring(true) }), [])
+
+  const finishTour = () => {
+    setTouring(false)
+    if (user && !user.tour_seen) {
+      tourSeenMutation.mutate()
+      queryClient.setQueryData(['auth', 'me'], { ...user, tour_seen: true })
+    }
+  }
+
   const themeSlug = paletteByName(user?.preferred_theme).slug
   // The card is tall enough on the Pouring tab to fill (and outscroll) the
   // whole phone screen, so a fully opaque card hides the flourish behind it
@@ -153,7 +181,7 @@ export function OperatorFormPage() {
         )}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-2">
+          <div data-tour="identity" className="flex min-w-0 items-center gap-2">
             <img src="/formlabs_logo.png" alt="" className="h-8 w-8 shrink-0 object-contain" />
             {user?.avatar_filename ? (
               <img src={accountApi.avatarUrl(user.avatar_filename)} alt="" className="h-8 w-8 shrink-0 rounded-full object-cover" />
@@ -165,17 +193,18 @@ export function OperatorFormPage() {
             <a
               href="/Formlabs_MES_Operator_Guide.pdf" target="_blank" rel="noopener noreferrer"
               title="Operator guide — how to log an hour, and what to do when something is not right"
+              data-tour="operator-guide-link"
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-current text-[var(--fl-muted)] opacity-70 hover:opacity-100"
             >
               <HelpCircle size={16} />
             </a>
             <div className="relative">
-              <button onClick={() => setShowAccount((v) => !v)} title="Account & Preferences" className={`${fl.btnSecondary} px-2.5`}>
+              <button data-tour="account-panel" onClick={() => setShowAccount((v) => !v)} title="Account & Preferences" className={`${fl.btnSecondary} px-2.5`}>
                 <Settings size={15} />
               </button>
               {showAccount && <AccountPanel onClose={() => setShowAccount(false)} />}
             </div>
-            <button onClick={logout} className={fl.btnSecondary}>
+            <button data-tour="sign-out" onClick={logout} className={fl.btnSecondary}>
               Sign out
             </button>
           </div>
@@ -198,7 +227,7 @@ export function OperatorFormPage() {
 
             <div className={fl.tabStrip}>
               {tabs.map((t) => (
-                <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 ${tab === t.key ? fl.tabActive : fl.tabInactive}`}>
+                <button key={t.key} data-tour={`tab-${t.key}`} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 ${tab === t.key ? fl.tabActive : fl.tabInactive}`}>
                   <t.icon size={14} className="shrink-0" strokeWidth={2.25} /> {t.label}
                   {t.key === 'audit' && showMyChecks && myOutstanding.length > 0 && (
                     <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
@@ -223,6 +252,7 @@ export function OperatorFormPage() {
           </ChecklistGate>
         </DebugOperatorProvider>
       </div>
+      {touring && <TourOverlay steps={operatorTourSteps(isPacker, setTab)} onFinish={finishTour} />}
     </div>
   )
 }

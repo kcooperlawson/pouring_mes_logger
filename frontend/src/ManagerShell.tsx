@@ -1,13 +1,14 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   Activity, ArrowLeft, BarChart3, BookOpen, ClipboardEdit, Compass, FlaskConical, PanelLeftClose,
   Plug, Settings, ShieldCheck, Tv, User, type LucideIcon,
 } from 'lucide-react'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { AdminPanelPage } from './adminPanel/AdminPanelPage'
 import { AnalyticsHubPage } from './analyticsHub/AnalyticsHubPage'
 import { accountApi } from './api/account'
+import { authApi } from './api/auth'
 import { referenceApi } from './api/reference'
 import { AssignedRunsPage } from './assignedRuns/AssignedRunsPage'
 import { useAuth } from './auth/AuthProvider'
@@ -18,6 +19,9 @@ import { AccountPanel } from './shell/AccountPanel'
 import { ManagerCockpitHub } from './shell/ManagerCockpitHub'
 import { ThemeFlourish } from './shell/ThemeFlourish'
 import { UpdateBanner } from './shell/UpdateBanner'
+import { TourOverlay } from './tour/TourOverlay'
+import { onTourRequest } from './tour/tourLaunch'
+import { managerTourSteps } from './tour/steps'
 import { BatchHistoryPage } from './batchHistory/BatchHistoryPage'
 import { CheckStatusPage } from './checklist/CheckStatusPage'
 import { CleanlinessGalleryPage } from './cleanliness/CleanlinessGalleryPage'
@@ -137,6 +141,7 @@ function SidebarNav({
       {items.map((item) => (
         <button
           key={item.key}
+          data-tour={`nav-${item.key}`}
           ref={(el) => { itemRefs.current[item.key] = el ?? undefined }}
           onClick={() => onSelect(item.key)}
           className={`relative flex items-center gap-2.5 rounded-md px-3 py-2 text-left text-sm transition ${
@@ -181,6 +186,24 @@ export function ManagerShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [collapsed, setCollapsed] = useState(loadCollapsed)
   const versionQuery = useQuery({ queryKey: ['reference', 'app-version'], queryFn: referenceApi.appVersion, staleTime: Infinity })
+
+  const queryClient = useQueryClient()
+  const [touring, setTouring] = useState(false)
+  const tourSeenMutation = useMutation({ mutationFn: authApi.tourSeen })
+
+  useEffect(() => {
+    if (user && user.tour_seen === false) setTouring(true)
+  }, [user?.id])
+
+  useEffect(() => onTourRequest(() => { setShowAccount(false); setTouring(true) }), [])
+
+  const finishTour = () => {
+    setTouring(false)
+    if (user && !user.tour_seen) {
+      tourSeenMutation.mutate()
+      queryClient.setQueryData(['auth', 'me'], { ...user, tour_seen: true })
+    }
+  }
 
   function toggleCollapsed() {
     setCollapsed((v) => {
@@ -277,6 +300,7 @@ export function ManagerShell() {
       {(user?.role === 'manager' || user?.role === 'admin') && (
         <a
           href="/Formlabs_MES_Handbook.pdf" target="_blank" rel="noopener noreferrer"
+          data-tour="handbook-link"
           className={`flex items-center gap-1.5 px-3 text-xs ${fl.muted} hover:text-[var(--fl-accent-2)]`}
         >
           <BookOpen size={13} className="shrink-0" /> Operations handbook (PDF)
@@ -296,7 +320,7 @@ export function ManagerShell() {
             clicked. AccountPanel itself renders once, below, outside
             sidebarContent, so there is only ever one instance and one
             listener regardless of which trigger was pressed. */}
-        <button onClick={() => setShowAccount((v) => !v)} className={`${fl.btnSecondary} w-full flex items-center justify-center gap-2`}>
+        <button data-tour="account-panel" onClick={() => setShowAccount((v) => !v)} className={`${fl.btnSecondary} w-full flex items-center justify-center gap-2`}>
           <Settings size={15} /> Account & Preferences
         </button>
         {/* /tv itself is plain role === manager/admin (App.tsx), not an
@@ -435,6 +459,7 @@ export function ManagerShell() {
           </div>
         </main>
       </div>
+      {touring && <TourOverlay steps={managerTourSteps(canAdminister, go)} onFinish={finishTour} />}
     </div>
   )
 }

@@ -73,7 +73,7 @@ export function PackingTab() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Step n={1} title="Packing details" done={step1Done} hint="End-of-Line / Pack-Out">
+      <Step n={1} tourId="packing-step-1" title="Packing details" done={step1Done} hint="End-of-Line / Pack-Out">
         <div className="flex flex-col gap-3">
           <div>
             <label className={label}>Container Format</label>

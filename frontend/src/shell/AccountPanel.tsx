@@ -8,6 +8,7 @@ import { isMuted, setMuted } from '../sound/chimes'
 import { flourishesDisabled, setFlourishesDisabled } from './ThemeFlourish'
 import { useToast } from '../toast/ToastProvider'
 import { Changelog } from './Changelog'
+import { requestTour } from '../tour/tourLaunch'
 import { fl } from '../theme'
 
 const input = fl.input
@@ -307,6 +308,12 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
         <p className={fl.heading}>⚙️ Account & Preferences</p>
         <button onClick={onClose} className={`${fl.muted} text-lg leading-none hover:text-[var(--fl-ink)]`} aria-label="Close">✕</button>
       </div>
+      <button
+        onClick={() => { onClose(); requestTour() }}
+        className={`mb-2 text-left text-xs font-semibold text-[var(--fl-accent-2)] hover:underline`}
+      >
+        🧭 Take the interactive tour
+      </button>
       <div className="flex gap-4 border-b border-[var(--fl-border)]">
         {TABS.map((t) => (
           <button

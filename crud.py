@@ -1013,6 +1013,7 @@ def authenticate_user(username: str, pin: str) -> tuple[dict | None, str | None]
                 "shift": user.shift,
                 "preferred_theme": getattr(user, 'preferred_theme', "Formlabs Forge"),
                 "avatar_filename": user.avatar_filename,
+                "tour_seen": bool(getattr(user, "tour_seen", True)),
             }, None
 
         # Wrong PIN: increment and lock if this tips over the threshold.
@@ -1068,6 +1069,17 @@ def create_user(username: str, email: str, pin: str, full_name: str, role: str, 
         ))
         session.commit()
         return True
+    finally:
+        session.close()
+
+
+def mark_tour_seen(user_id: int):
+    session = ScopedSession()
+    try:
+        user = session.query(User).filter(User.id == user_id).first()
+        if user:
+            user.tour_seen = True
+            session.commit()
     finally:
         session.close()
 
@@ -3083,6 +3095,7 @@ def get_user_by_session_token(token: str) -> dict | None:
             "role": user.role, "shift": user.shift,
             "preferred_theme": getattr(user, "preferred_theme", "Formlabs Forge"),
             "avatar_filename": user.avatar_filename,
+            "tour_seen": bool(getattr(user, "tour_seen", True)),
         }
     finally:
         session.close()

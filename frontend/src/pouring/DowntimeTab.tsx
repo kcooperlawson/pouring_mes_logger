@@ -69,7 +69,7 @@ export function DowntimeTab({ myStation }: { myStation: string }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <Step n={1} title="Station & reason" done={step1Done} hint={step1Done ? undefined : 'pick both'}>
+      <Step n={1} tourId="downtime-step-1" title="Station & reason" done={step1Done} hint={step1Done ? undefined : 'pick both'}>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
             <label className={label}>Downtime Station</label>
