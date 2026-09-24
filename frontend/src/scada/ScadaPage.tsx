@@ -11,6 +11,7 @@ import { Odometer } from '../tv/PrintBuild'
 import { fl } from '../theme'
 import type { DrillFilter } from '../api/drill'
 import { Drill } from '../drill/DrillContext'
+import { Band } from '../shell/Band'
 import { stagger } from '../shell/motion'
 import type { LogRow } from '../api/scada'
 
@@ -47,20 +48,6 @@ function scadaDrill(q: ScadaQuery, activeShift?: string): DrillFilter {
 const card = fl.card
 const select = fl.select
 const label = fl.label
-
-// A band across the page, so the dashboard reads as sections rather than as
-// one long run of equally-weighted boxes.
-function Band({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children?: ReactNode }) {
-  return (
-    <div className="flex items-center gap-3">
-      <h2 className="flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--fl-body)]">
-        <Icon size={14} className="shrink-0 text-[var(--fl-accent-2)]" /> {title}
-      </h2>
-      <span className="h-px flex-1 bg-[var(--fl-border)]" />
-      {children}
-    </div>
-  )
-}
 
 /** The shape of the output behind the headline number, drawn from the same
  *  rows the stream below lists - by hour for a single day, by day for any

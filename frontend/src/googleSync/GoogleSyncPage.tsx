@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Cloud, Download, Link2, Send, Sliders } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { EXPORT_MODES, googleSyncApi, HORIZONS, type SheetTarget } from '../api/googleSync'
+import { Band } from '../shell/Band'
 import { fl } from '../theme'
 
 const input = fl.input
@@ -43,8 +45,8 @@ function AddTargetForm({ expanded }: { expanded: boolean }) {
 
   return (
     <details className={card} open={expanded}>
-      <summary className="cursor-pointer text-sm font-medium text-white">➕ Link a spreadsheet of your own</summary>
-      <div className="mt-3 flex flex-col gap-2 text-sm text-[#CBD5E1]">
+      <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">➕ Link a spreadsheet of your own</summary>
+      <div className="mt-3 flex flex-col gap-2 text-sm text-[var(--fl-body)]">
         <p>
           A Google Sheet is a document — it has no inbox, so it cannot be sent rows directly. Giving your
           sheet an address takes four steps:
@@ -100,7 +102,7 @@ function EditTargetsPanel({ targets }: { targets: SheetTarget[] }) {
 
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">✏️ Sheets you have linked</summary>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">✏️ Sheets you have linked</summary>
       <div className="mt-3 flex flex-col gap-3">
         {editable.length === 0 && (
           <p className={`text-sm ${fl.muted}`}>The sheets in your list were shared by somebody else, so only they can change them.</p>
@@ -127,7 +129,7 @@ function EditRow({ target, onSave, onDelete }: {
       <div className="flex flex-wrap items-center gap-2">
         <input className={`${input} flex-1`} value={name} onChange={(e) => setName(e.target.value)} />
         <input className={`${input} flex-[2]`} value={url} onChange={(e) => setUrl(e.target.value)} />
-        <label className="flex items-center gap-1 text-xs text-[#CBD5E1]">
+        <label className="flex items-center gap-1 text-xs text-[var(--fl-body)]">
           <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
           Shared
         </label>
@@ -181,16 +183,18 @@ export function GoogleSyncPage() {
   const excelAvailable = true // the backend 409s with a clear message if openpyxl is missing
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
       <div>
-        <h1 className={fl.heading}>☁️ External Reporting &amp; Google Cloud Sync Control Panel</h1>
-        <p className={`text-sm ${fl.muted}`}>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+          <Cloud size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> External Reporting &amp; Google Cloud Sync
+        </h1>
+        <p className={`mt-1 text-sm ${fl.muted}`}>
           Send the record to a spreadsheet of your own. Choose what to send and how far back, pick the
           columns, and push. Every push is manual and on demand.
         </p>
       </div>
 
-      <p className="text-sm font-semibold text-white">📗 Destination</p>
+      <Band title="Destination" icon={Link2} />
 
       {targets.length === 0 ? (
         <p className={`text-sm ${fl.muted}`}>
@@ -221,13 +225,12 @@ export function GoogleSyncPage() {
       <AddTargetForm expanded={targets.length === 0} />
       <EditTargetsPanel targets={targets} />
 
-      <hr className={fl.divider} />
-      <p className="text-sm font-semibold text-white">⚙️ Payload Column Customization</p>
+      <Band title="Payload Column Customization" icon={Sliders} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
           <label className={`mb-1 block ${fl.label}`}>1. Select Data Payload Type</label>
-          <div className="flex flex-col gap-1 text-sm text-[#CBD5E1]">
+          <div className="flex flex-col gap-1 text-sm text-[var(--fl-body)]">
             {EXPORT_MODES.map((m) => (
               <label key={m} className="flex items-center gap-2">
                 <input type="radio" checked={exportMode === m} onChange={() => setExportMode(m)} />
@@ -249,7 +252,7 @@ export function GoogleSyncPage() {
           <p className={`mb-2 text-xs ${fl.muted}`}>Toggle Metrics / Statistics to Include in Payload:</p>
           <div className="flex flex-wrap gap-2">
             {preview.columns.map((c) => (
-              <label key={c} className="flex items-center gap-1 rounded border border-[#475569] px-2 py-1 text-xs text-[#CBD5E1]">
+              <label key={c} className="flex items-center gap-1 rounded border border-[#475569] px-2 py-1 text-xs text-[var(--fl-body)]">
                 <input
                   type="checkbox"
                   checked={selectedCols.includes(c)}
@@ -266,13 +269,12 @@ export function GoogleSyncPage() {
 
       {target && preview && (
         <p className={`text-sm ${fl.muted}`}>
-          Ready to send <b className="text-white">{preview.row_count.toLocaleString()} rows</b> to{' '}
-          <b className="text-white">{target.name}</b> — {horizon}.
+          Ready to send <b className="text-[var(--fl-ink)]">{preview.row_count.toLocaleString()} rows</b> to{' '}
+          <b className="text-[var(--fl-ink)]">{target.name}</b> — {horizon}.
         </p>
       )}
 
-      <hr className={fl.divider} />
-      <p className="text-sm font-semibold text-white">⬇️ Take it as a file</p>
+      <Band title="Take it as a file" icon={Download} />
       <p className={`text-sm ${fl.muted}`}>
         No Google account, no setup, nothing to publish — and the file opens straight in Google Sheets
         (File → Import) or Excel.
@@ -298,8 +300,7 @@ export function GoogleSyncPage() {
         </button>
       </div>
 
-      <hr className={fl.divider} />
-      <p className="text-sm font-semibold text-white">🚀 Or push it straight into a linked sheet</p>
+      <Band title="Or push it straight into a linked sheet" icon={Send} />
 
       {!target ? (
         <p className={`text-sm ${fl.muted}`}>Nothing linked yet — link a sheet above, or just take the file.</p>

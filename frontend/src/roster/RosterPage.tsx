@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { KeyRound, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { rosterApi } from '../api/roster'
+import { stagger } from '../shell/motion'
 import { fl } from '../theme'
 
 const input = fl.input
@@ -43,15 +45,21 @@ export function RosterPage() {
   const roster = rosterQuery.data ?? []
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>👥 Floor Personnel Administration</h1>
-      <p className="rounded-lg border border-sky-800 bg-sky-950 px-3 py-2 text-sm text-sky-200">
-        💡 Managers can provision and manage floor personnel. IT Admins manage management accounts and terminations.
-      </p>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <div>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+          <Users size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> Floor Personnel Administration
+        </h1>
+        <p className={`mt-1 text-sm ${fl.muted}`}>
+          Managers provision and manage floor personnel. IT Admins manage management accounts and terminations.
+        </p>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-[280px_1fr]">
         <div className={`${card} flex flex-col gap-2`}>
-          <p className="text-sm font-semibold text-white">➕ Provision Floor Personnel</p>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-[var(--fl-ink)]">
+            <UserPlus size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Provision Floor Personnel
+          </p>
           <input className={input} placeholder="Full Name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
           <input className={input} placeholder="Work Email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <input className={input} placeholder="Username / ID" value={username} onChange={(e) => setUsername(e.target.value)} />
@@ -76,7 +84,9 @@ export function RosterPage() {
 
         <div className="flex flex-col gap-3">
           <div className={card}>
-            <p className="mb-2 text-sm font-semibold text-white">📋 Floor Roster</p>
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-semibold text-[var(--fl-ink)]">
+              <Users size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Floor Roster
+            </p>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead className={fl.tableHead}>
@@ -89,13 +99,17 @@ export function RosterPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {roster.map((u) => (
-                    <tr key={u.id} className={fl.tableRow}>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{u.id}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{u.full_name}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{u.username}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{u.role}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{u.shift}</td>
+                  {roster.map((u, i) => (
+                    <tr
+                      key={u.id}
+                      className={fl.tableRow}
+                      style={{ animation: `fl-fade-up 320ms ${stagger(i, 30, 200)}ms cubic-bezier(0.22,0.61,0.36,1) both` }}
+                    >
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{u.id}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{u.full_name}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{u.username}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{u.role}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{u.shift}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -105,7 +119,9 @@ export function RosterPage() {
           </div>
 
           <details className={card}>
-            <summary className="cursor-pointer text-sm font-medium text-white">🔑 Reset Floor Operator PIN</summary>
+            <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[var(--fl-ink)]">
+              <KeyRound size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Reset Floor Operator PIN
+            </summary>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row">
               <select className={input} value={resetUserId} onChange={(e) => setResetUserId(Number(e.target.value))}>
                 <option value="">— choose —</option>

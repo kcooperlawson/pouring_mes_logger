@@ -6,6 +6,19 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.31 — Wednesday, September 23, 2026
+### Roster and Google Sync get the modern look, and the section-divider pattern is shared instead of copied.
+
+Third batch of the visual redesign pass, same rule as the last two: nothing here changes what a page shows or does.
+
+**Floor Personnel Administration** gets an icon header, icons on its "Provision," "Floor Roster" and "Reset PIN" sections, and the roster table rows animate in the same way every other redesigned list in the app does.
+
+**External Reporting & Google Cloud Sync** gets an icon header and its four bare `<hr>`-and-bold-text sections (Destination, Payload Column Customization, Take it as a file, Push it into a linked sheet) replaced with the same banded-divider look Live SCADA uses.
+
+That banded divider was copied into three files by the last two releases - Live SCADA, Historical, and now here. Pulled it into `shell/Band.tsx` so there's one definition instead of three copies quietly drifting apart, and pointed all three pages at it.
+
+Five manager pages left: Lot Verification, Assigned Runs, Analytics Hub, Resin Canvas, and the IT Admin Users tab.
+
 ## 3.30 — Wednesday, September 23, 2026
 ### Historical and Log Management look like the same app as Cockpit and Live SCADA now.
 

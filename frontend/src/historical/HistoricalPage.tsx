@@ -4,6 +4,7 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { historicalApi } from '../api/historical'
 import { fl } from '../theme'
+import { Band } from '../shell/Band'
 import { stagger } from '../shell/motion'
 import { Drill } from '../drill/DrillContext'
 
@@ -17,19 +18,6 @@ const HORIZONS = [
   ['ytd', 'Year to Date'],
   ['all', 'All Time'],
 ] as const
-
-// Same banded-section header used on Live SCADA, so a manager moving between
-// the two dashboards isn't reading two different visual languages.
-function Band({ title, icon: Icon }: { title: string; icon: LucideIcon }) {
-  return (
-    <div className="flex items-center gap-3">
-      <h2 className="flex shrink-0 items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--fl-body)]">
-        <Icon size={14} className="shrink-0 text-[var(--fl-accent-2)]" /> {title}
-      </h2>
-      <span className="h-px flex-1 bg-[var(--fl-border)]" />
-    </div>
-  )
-}
 
 function TrendLine({ points }: { points: { date: string; bottles_filled: number }[] }) {
   const w = 600
