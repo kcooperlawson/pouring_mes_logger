@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Cloud, Download, Link2, Send, Sliders } from 'lucide-react'
+import { Cloud, Copy, Download, Link2, Send, Sliders } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { EXPORT_MODES, googleSyncApi, HORIZONS, type SheetTarget } from '../api/googleSync'
 import { Band } from '../shell/Band'
+import { useToast } from '../toast/ToastProvider'
 import { fl } from '../theme'
 
 const input = fl.input
@@ -20,6 +21,68 @@ function downloadCsv(columns: string[], rows: Record<string, unknown>[], filenam
   a.download = filename
   a.click()
   URL.revokeObjectURL(url)
+}
+
+// The steps come from sheet_sync.SETUP_STEPS, written with **bold**, *italic*
+// and `code` marks - rendered here rather than duplicated as JSX, so the page
+// and the backend can't drift into describing two different setups.
+function Marked({ text }: { text: string }) {
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g).filter(Boolean)
+  return (
+    <>
+      {parts.map((p, i) => {
+        if (p.startsWith('**')) return <b key={i}>{p.slice(2, -2)}</b>
+        if (p.startsWith('`')) return <code key={i}>{p.slice(1, -1)}</code>
+        if (p.startsWith('*')) return <i key={i}>{p.slice(1, -1)}</i>
+        return <span key={i}>{p}</span>
+      })}
+    </>
+  )
+}
+
+function SetupSteps() {
+  const toast = useToast()
+  const query = useQuery({ queryKey: ['google-sync', 'setup-script'], queryFn: googleSyncApi.setupScript, staleTime: Infinity })
+  const [showScript, setShowScript] = useState(false)
+  const setup = query.data
+  if (!setup) return null
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(setup.script)
+      toast.show('Script copied - paste it into Apps Script.')
+    } catch {
+      // Clipboard access needs HTTPS or localhost; on plain HTTP over the LAN
+      // it's refused, so fall back to showing it for a manual select-all.
+      setShowScript(true)
+      toast.show('Could not copy automatically - select the script below and copy it.', 'error')
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <ol className="list-inside list-decimal">
+        {setup.steps.map((s, i) => <li key={i}><Marked text={s} /></li>)}
+      </ol>
+      <div className="flex flex-wrap gap-2">
+        <button className={`${fl.btn} flex items-center gap-1.5`} onClick={copy}>
+          <Copy size={14} /> Copy the script
+        </button>
+        <button className={fl.btnSecondary} onClick={() => setShowScript((v) => !v)}>
+          {showScript ? 'Hide script' : 'Show script'}
+        </button>
+      </div>
+      {showScript && (
+        <textarea
+          readOnly
+          className={`${input} h-48 font-mono text-[11px]`}
+          value={setup.script}
+          onFocus={(e) => e.currentTarget.select()}
+        />
+      )}
+      <p className={`text-xs ${fl.muted}`}>Script version {setup.version}.</p>
+    </div>
+  )
 }
 
 function AddTargetForm({ expanded }: { expanded: boolean }) {
@@ -49,14 +112,9 @@ function AddTargetForm({ expanded }: { expanded: boolean }) {
       <div className="mt-3 flex flex-col gap-2 text-sm text-[var(--fl-body)]">
         <p>
           A Google Sheet is a document — it has no inbox, so it cannot be sent rows directly. Giving your
-          sheet an address takes four steps:
+          sheet an address takes four steps, about two minutes, once per sheet:
         </p>
-        <ol className="list-inside list-decimal">
-          <li>Open your Google Sheet and choose <b>Extensions → Apps Script</b>.</li>
-          <li>Delete whatever is in the editor, paste the script (ask your admin for it), and save.</li>
-          <li>Choose <b>Deploy → New deployment → Web app</b>. Set <i>Execute as</i> to <b>Me</b> and <i>Who has access</i> to <b>Anyone</b>, then Deploy and approve the permissions.</li>
-          <li>Copy the <b>Web app URL</b> it shows you — it ends in <code>/exec</code> — and paste it below.</li>
-        </ol>
+        <SetupSteps />
 
         <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_2fr]">
           <input className={input} placeholder="Name it (e.g. My weekly report)" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} />

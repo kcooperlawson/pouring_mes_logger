@@ -293,7 +293,8 @@ def export_filename(mode_label, horizon_label, ext, today=None) -> str:
     with a dozen of these and "export (3).xlsx" tells nobody which shift they
     are looking at.
     """
-    kind = "kpi-summary" if "Aggregated" in str(mode_label) else "audit-log"
+    label = str(mode_label)
+    kind = "kpi-summary" if "Aggregated" in label else "qc-batches" if "QC" in label else "audit-log"
     scope = {0: "today", 7: "7-days", 30: "30-days"}.get(horizon_days(horizon_label), "all-time")
     stamp = (today or date.today()).isoformat()
     return f"formlabs-mes-{kind}-{scope}-{stamp}.{ext}"

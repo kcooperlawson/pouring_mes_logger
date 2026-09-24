@@ -16,7 +16,7 @@ import crud
 import milestones
 from api.deps import get_current_user, resolve_operator_name
 from api.schemas.summary import (CareerOut, CartridgePoint, HourlyPoint, MilestoneTier, MonthlyRecapOut,
-                                 ResinPoint, ShiftSummaryOut)
+                                 ResinPoint, ShiftRecapOut, ShiftSummaryOut)
 
 router = APIRouter(prefix="/summary", tags=["summary"])
 
@@ -105,6 +105,59 @@ def today(as_operator: str | None = None, user: dict = Depends(get_current_user)
         by_cartridge=[CartridgePoint(cartridge_type=row["cartridge_type"], units=int(row["bottles_filled"]),
                                      litres=round(row["litres"], 1))
                      for _, row in by_cartridge.iterrows()],
+    )
+
+
+@router.get("/shift-recap", response_model=ShiftRecapOut)
+def shift_recap(as_operator: str | None = None, user: dict = Depends(get_current_user)):
+    """Today, for one person, as a sign-off card: what they did, how it
+    compared, and what it earned. Rank is only a position and a count - it
+    never names anybody else - and it compares like with like: pourers
+    against pourers, packers against packers."""
+    who = resolve_operator_name(user, as_operator)
+    today_d = date.today()
+    log_type = "Packing Count" if user["role"] == "packer" else "Hourly Bottle Count"
+    df_all = crud.get_production_logs_df(start_date=today_d, end_date=today_d)
+    if not df_all.empty:
+        df_all = df_all[df_all["log_type"] == log_type]
+    df = df_all[df_all["operator_name"] == who] if not df_all.empty else df_all
+
+    lifetime = crud.operator_lifetime_units(who)
+    state = milestones.progress(lifetime)
+    nxt = milestones.as_dict(state["next"])
+    base = dict(operator_name=who, lifetime=lifetime,
+                next_badge=MilestoneTier(**nxt) if nxt else None, to_next=int(state["remaining"]))
+    if df.empty:
+        return ShiftRecapOut(units=0, **base)
+
+    units = int(df["bottles_filled"].sum())
+    scrap = int(df["scrap_empty"].fillna(0).sum() + df["scrap_filled"].fillna(0).sum())
+    litres = float(sum(crud.log_litres(r["bottles_filled"], r["cartridge_type"], r.get("litres_poured"))
+                       for _, r in df.iterrows()))
+    ts = pd.to_datetime(df["timestamp"])
+    hours_active = max(0.0, (ts.max() - ts.min()).total_seconds() / 3600.0)
+    best_hour = int(df.assign(h=ts.dt.floor("h")).groupby("h")["bottles_filled"].sum().max())
+
+    per_person = df_all.groupby("operator_name")["bottles_filled"].sum().sort_values(ascending=False)
+    rank = int(list(per_person.index).index(who)) + 1 if who in per_person.index else None
+
+    weights_taken = weights_in = 0
+    if "weight_status" in df.columns:
+        w = df["weight_status"].dropna()
+        weights_taken, weights_in = int(len(w)), int((w == "in").sum())
+
+    # Badges whose threshold sits between where they started today and now.
+    before = lifetime - units if log_type == "Hourly Bottle Count" else lifetime
+    earned = [MilestoneTier(at=at, label=label, emoji=emoji)
+              for at, label, emoji in milestones.TIERS if before < at <= lifetime]
+
+    return ShiftRecapOut(
+        units=units, litres=round(litres, 1), scrap=scrap,
+        yield_pct=round(units / (units + scrap) * 100, 1) if (units + scrap) else 100.0,
+        logs=int(len(df)), hours_active=round(hours_active, 1), best_hour_units=best_hour,
+        rank=rank, ranked_of=int(len(per_person)),
+        weights_taken=weights_taken, weights_in_band=weights_in,
+        badges_today=earned, **base,
     )
 
 

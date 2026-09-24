@@ -6,6 +6,7 @@ import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
 import { useToast } from '../toast/ToastProvider'
 import { ChecklistStatus } from '../checklist/ChecklistStatus'
 import { KIND_LABEL, useMyChecks, type CheckKind } from '../checklist/useMyChecks'
+import { requestShiftRecap } from '../shell/ShiftRecap'
 import { fl } from '../theme'
 
 const input = `${fl.input} py-3 text-base font-normal text-[var(--fl-ink)]`
@@ -93,12 +94,16 @@ export function AuditTab({
       return auditApi.submit(fd)
     },
     onSuccess: (resp) => {
+      // The end-of-shift photo is the operator saying they're done - the
+      // natural moment for the day's recap, before they even reach Sign out.
+      const endedShift = logging?.auditType === KIND_TO_AUDIT_TYPE.end
       setNotes('')
       setPhotos([])
       setLogging(null)
       setShowOther(false)
       toast.show(resp.message)
       queryClient.invalidateQueries({ queryKey: ['checklist', 'compliance', today] })
+      if (endedShift) requestShiftRecap('end')
     },
   })
 

@@ -26,6 +26,7 @@ import { DowntimeTab } from './pouring/DowntimeTab'
 import { PackingTab } from './pouring/PackingTab'
 import { PouringTab } from './pouring/PouringTab'
 import { SummaryTab } from './pouring/SummaryTab'
+import { ShiftRecapHost, requestShiftRecap } from './shell/ShiftRecap'
 import { TourOverlay } from './tour/TourOverlay'
 import { onTourRequest } from './tour/tourLaunch'
 import { operatorTourSteps } from './tour/steps'
@@ -204,7 +205,10 @@ export function OperatorFormPage() {
               </button>
               {showAccount && <AccountPanel onClose={() => setShowAccount(false)} />}
             </div>
-            <button data-tour="sign-out" onClick={logout} className={fl.btnSecondary}>
+            {/* Floor staff get their shift recap on the way out (it signs
+                straight out if there's nothing logged today); a manager
+                testing this screen just signs out. */}
+            <button data-tour="sign-out" onClick={() => (isManagement ? logout() : requestShiftRecap('signout'))} className={fl.btnSecondary}>
               Sign out
             </button>
           </div>
@@ -250,6 +254,7 @@ export function OperatorFormPage() {
               {tab === 'summary' && <SummaryTab />}
             </div>
           </ChecklistGate>
+          <ShiftRecapHost onSignOut={logout} isPacker={isPacker} />
         </DebugOperatorProvider>
       </div>
       {touring && <TourOverlay steps={operatorTourSteps(isPacker, setTab)} onFinish={finishTour} />}

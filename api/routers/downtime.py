@@ -12,6 +12,11 @@ from api.schemas.downtime import DowntimeSubmitRequest
 router = APIRouter(prefix="/downtime", tags=["downtime"])
 
 
+@router.get("/last")
+def last(as_operator: str | None = None, user: dict = Depends(get_current_user)):
+    return crud.last_downtime_for_operator(resolve_operator_name(user, as_operator))
+
+
 @router.post("/submit")
 def submit(body: DowntimeSubmitRequest, user: dict = Depends(get_current_user)):
     crud.add_downtime_log(

@@ -49,10 +49,18 @@ export const HORIZONS = [
 export const EXPORT_MODES = [
   '📊 Aggregated Calculated Metrics (KPI Summary)',
   '📋 Raw Production Audit Stream',
+  '🧪 QC & Batch History',
 ] as const
+
+export interface SetupScript {
+  version: number
+  script: string
+  steps: string[]
+}
 
 export const googleSyncApi = {
   targets: () => api.get<SheetTarget[]>('/google-sync/targets'),
+  setupScript: () => api.get<SetupScript>('/google-sync/setup-script'),
   classifyUrl: (url: string) => api.get<ClassifyUrlResult>(`/google-sync/classify-url?url=${encodeURIComponent(url)}`),
   addTarget: (body: { name: string; url: string; is_shared: boolean }) =>
     api.post<SheetTarget>('/google-sync/targets', body),

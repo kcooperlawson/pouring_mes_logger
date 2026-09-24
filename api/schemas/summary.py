@@ -57,3 +57,23 @@ class MonthlyRecapOut(BaseModel):
     best_day_ordinal: str | None = None  # e.g. "12th", formatted server-side
     best_day_units: int = 0
     mismatches: int = 0
+
+
+class ShiftRecapOut(BaseModel):
+    """The card shown when an operator signs out or ends their shift."""
+    operator_name: str
+    units: int
+    litres: float = 0.0
+    scrap: int = 0
+    yield_pct: float = 100.0
+    logs: int = 0
+    hours_active: float = 0.0
+    best_hour_units: int = 0
+    rank: int | None = None          # 1 = most units today, among people doing the same job
+    ranked_of: int = 0
+    weights_taken: int = 0
+    weights_in_band: int = 0
+    badges_today: list[MilestoneTier] = []
+    lifetime: int = 0
+    next_badge: MilestoneTier | None = None
+    to_next: int = 0

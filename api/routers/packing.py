@@ -15,6 +15,11 @@ from api.schemas.packing import PackingSubmitRequest
 router = APIRouter(prefix="/packing", tags=["packing"])
 
 
+@router.get("/lots-today")
+def lots_today(user: dict = Depends(get_current_user)):
+    return crud.packing_lots_today()
+
+
 @router.post("/submit")
 def submit(body: PackingSubmitRequest, user: dict = Depends(get_current_user)):
     crud.add_hourly_log(

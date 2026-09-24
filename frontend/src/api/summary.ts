@@ -57,7 +57,28 @@ export interface Career {
   tiers: MilestoneTier[]
 }
 
+export interface ShiftRecap {
+  operator_name: string
+  units: number
+  litres: number
+  scrap: number
+  yield_pct: number
+  logs: number
+  hours_active: number
+  best_hour_units: number
+  rank: number | null
+  ranked_of: number
+  weights_taken: number
+  weights_in_band: number
+  badges_today: MilestoneTier[]
+  lifetime: number
+  next_badge: MilestoneTier | null
+  to_next: number
+}
+
 export const summaryApi = {
+  shiftRecap: (asOperator?: string) =>
+    api.get<ShiftRecap>(asOperator ? `/summary/shift-recap?${new URLSearchParams({ as_operator: asOperator })}` : '/summary/shift-recap'),
   career: (asOperator?: string) =>
     api.get<Career>(asOperator ? `/summary/career?${new URLSearchParams({ as_operator: asOperator })}` : '/summary/career'),
   today: (asOperator?: string) =>

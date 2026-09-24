@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 import { downtimeApi } from '../api/downtime'
 import { referenceApi } from '../api/reference'
 import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
@@ -25,8 +25,30 @@ export function DowntimeTab({ myStation }: { myStation: string }) {
     queryFn: referenceApi.downtimeReasons,
   })
 
+  const queryClient = useQueryClient()
   const [station, setStation] = useState(myStation)
   const [reason, setReason] = useState('')
+  // A pump that clogged once this shift tends to clog again - the station and
+  // reason from this operator's last stop today come back pre-picked. Never
+  // the minutes or the notes; those describe that one stop, not the next.
+  const lastQuery = useQuery({
+    queryKey: ['downtime', 'last', asOperator],
+    queryFn: () => downtimeApi.last(asOperator),
+    staleTime: 30_000,
+  })
+  const appliedLast = useRef(false)
+  useEffect(() => {
+    const last = lastQuery.data
+    const reasons = reasonsQuery.data
+    if (appliedLast.current || !last || !reasons) return
+    appliedLast.current = true
+    if (!last.found) return
+    // Only a reason that's still on the list - one removed since would sit in
+    // state behind a blank-looking picker and get submitted without anyone
+    // seeing it.
+    if (reasons.includes(last.reason)) setReason((r) => r || last.reason)
+    setStation((s) => s || last.station)
+  }, [lastQuery.data, reasonsQuery.data])
   const [duration, setDuration] = useState(15)
   const [notes, setNotes] = useState('')
   // A running downtime. Kept as the moment it started rather than as a
@@ -49,6 +71,7 @@ export function DowntimeTab({ myStation }: { myStation: string }) {
     mutationFn: () => downtimeApi.submit({ station, reason, duration_min: duration, notes, as_operator: asOperator }),
     onSuccess: (resp) => {
       setNotes('')
+      queryClient.invalidateQueries({ queryKey: ['downtime', 'last'] })
       toast.show(resp.message)
       playLogged()
     },

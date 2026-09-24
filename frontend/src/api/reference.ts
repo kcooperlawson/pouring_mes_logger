@@ -47,5 +47,6 @@ export const referenceApi = {
   lastPicks: (asOperator?: string) =>
     api.get<LastPicks>(`/reference/user/last-picks${asOperator ? `?as_operator=${encodeURIComponent(asOperator)}` : ''}`),
   activeOperators: () => api.get<string[]>('/reference/active-operators'),
+  floorStaff: () => api.get<string[]>('/reference/floor-staff'),
   appVersion: () => api.get<{ version: string }>('/reference/app-version'),
 }

@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, KeyRound, Ticket, Unlock, UserCog, UserPlus, Users } from 'lucide-react'
+import { AlertTriangle, Compass, KeyRound, Ticket, Unlock, UserCog, UserPlus, Users } from 'lucide-react'
 import { useState } from 'react'
 import { adminApi, type AdminUser } from '../api/admin'
+import { useToast } from '../toast/ToastProvider'
 import { fl } from '../theme'
 
 const card = fl.card
@@ -215,6 +216,54 @@ function ResetPinPanel({ users, onDone }: { users: AdminUser[]; onDone: () => vo
   )
 }
 
+function ShowTourPanel({ users, onDone }: { users: AdminUser[]; onDone: () => void }) {
+  const toast = useToast()
+  const [userId, setUserId] = useState<number | ''>('')
+  const [shift, setShift] = useState('Shift 2')
+  const single = useMutation({
+    mutationFn: () => adminApi.showTour(userId as number),
+    onSuccess: () => { toast.show('The tour will open for them on their next sign-in.'); onDone() },
+  })
+  // For a whole crew at once - the case this exists for is a shift whose
+  // accounts were made before the tour did.
+  const crew = users.filter((u) => u.shift === shift && (u.role === 'operator' || u.role === 'packer'))
+  const bulk = useMutation({
+    mutationFn: () => Promise.all(crew.map((u) => adminApi.showTour(u.id))),
+    onSuccess: () => { toast.show(`Queued for ${crew.length} ${crew.length === 1 ? 'person' : 'people'} on ${shift}.`); onDone() },
+  })
+  return (
+    <details className={card}>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-[var(--fl-ink)]"><Compass size={15} className="shrink-0 text-[var(--fl-accent-2)]" /> Show the guided tour</summary>
+      <p className={`mt-2 text-xs ${fl.muted}`}>
+        The tour opens on its own only for brand-new accounts. Queue it here for anyone whose account already
+        existed - it opens the next time they sign in, once.
+      </p>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+        <select className={select} value={userId} onChange={(e) => setUserId(Number(e.target.value))}>
+          <option value="">— choose —</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>{u.username}{u.tour_seen ? '' : ' (queued)'}</option>
+          ))}
+        </select>
+        <button className={`${fl.btn} sm:w-48`} disabled={!userId || single.isPending} onClick={() => single.mutate()}>
+          Show on next sign-in
+        </button>
+      </div>
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <select className={`${select} sm:w-40`} value={shift} onChange={(e) => setShift(e.target.value)}>
+          {SHIFTS.map((s) => <option key={s}>{s}</option>)}
+        </select>
+        <button className={fl.btnSecondary} disabled={crew.length === 0 || bulk.isPending} onClick={() => bulk.mutate()}>
+          Queue for all {crew.length} operator{crew.length === 1 ? '' : 's'}/packer{crew.length === 1 ? '' : 's'} on {shift}
+        </button>
+      </div>
+      {(single.isError || bulk.isError) && (
+        <p className="mt-1 text-xs text-red-400">{((single.error ?? bulk.error) as Error).message}</p>
+      )}
+    </details>
+  )
+}
+
 function UnlockPanel({ users, onDone }: { users: AdminUser[]; onDone: () => void }) {
   const locked = users.filter((u) => u.is_locked)
   const [userId, setUserId] = useState<number | ''>('')
@@ -278,6 +327,7 @@ export function UsersTab({ currentUsername }: { currentUsername: string }) {
       <AbilitiesPanel users={users} />
       <ResetPinPanel users={users} onDone={invalidate} />
       <UnlockPanel users={users} onDone={invalidate} />
+      <ShowTourPanel users={users} onDone={invalidate} />
       <TerminatePanel users={users} currentUsername={currentUsername} onDone={invalidate} />
     </div>
   )

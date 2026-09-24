@@ -11,6 +11,7 @@ so it's reused here exactly as crud.py's business logic is - nothing in
 this router re-implements anything that module already does correctly.
 """
 import io
+from datetime import datetime, time as dtime
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
@@ -25,7 +26,17 @@ from api.schemas.google_sync import (AddTargetRequest, ClassifyUrlOut, ExportPre
 
 router = APIRouter(prefix="/google-sync", tags=["google-sync"])
 
-EXPORT_MODES = ("📊 Aggregated Calculated Metrics (KPI Summary)", "📋 Raw Production Audit Stream")
+EXPORT_MODES = (
+    "📊 Aggregated Calculated Metrics (KPI Summary)",
+    "📋 Raw Production Audit Stream",
+    "🧪 QC & Batch History",
+)
+
+_TAB_NAMES = {EXPORT_MODES[0]: "KPI Summary", EXPORT_MODES[1]: "Raw Audit Logs", EXPORT_MODES[2]: "QC & Batches"}
+
+
+def _tab_name(export_mode: str) -> str:
+    return _TAB_NAMES.get(export_mode, "MES Export")
 
 
 def _is_admin(user: dict) -> bool:
@@ -69,6 +80,16 @@ def _visible_rows(user: dict) -> list[dict]:
 @router.get("/targets", response_model=list[SheetTargetOut])
 def list_targets(user: dict = Depends(require_ability("export_data"))):
     return [_target_out(r, user) for r in _visible_rows(user)]
+
+
+@router.get("/setup-script")
+def setup_script(user: dict = Depends(require_ability("export_data"))):
+    """The Apps Script a sheet needs before it can receive rows, and the steps
+    for installing it. It always lived in sheet_sync.py so the page could show
+    it; the React page just never asked for it and said "ask your admin"
+    instead."""
+    return {"version": sheet_sync.SCRIPT_VERSION, "script": sheet_sync.APPS_SCRIPT,
+            "steps": list(sheet_sync.SETUP_STEPS)}
 
 
 @router.get("/classify-url", response_model=ClassifyUrlOut)
@@ -140,7 +161,50 @@ def test_target(target_id: int, user: dict = Depends(require_ability("export_dat
         return TestResult(ok=False, message=f"Could not reach it: {str(exc)[:200]}")
 
 
+def _fmt_dt(value) -> str:
+    if value is None or (isinstance(value, float) and value != value):
+        return ""
+    try:
+        return pd.Timestamp(value).strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return str(value)
+
+
+def _build_qc_df(horizon: str) -> pd.DataFrame:
+    """One row per filling of a vessel, with its QC trip. QC lives on the batch,
+    not on any production log, so it can't be a column of the other two modes."""
+    start = sheet_sync.horizon_start(horizon)
+    since = datetime.combine(start, dtime.min) if start else None
+    batches = crud.get_batches(since=since, limit=5000)
+    if not batches:
+        return pd.DataFrame()
+    rows = []
+    for b in batches:
+        rows.append({
+            "Vessel": b["reactor_name"],
+            "Resin": b["resin_type"],
+            "Lot": b["lot_number"],
+            "Pump Station": b["pump_station"],
+            "Filled": _fmt_dt(b["filled_at"]),
+            "Emptied": _fmt_dt(b["emptied_at"]),
+            "Status": "In vessel" if b["open"] else "Emptied",
+            "Hours in Vessel": round(b["hours_in_reactor"], 1) if b["hours_in_reactor"] is not None else None,
+            "QC Sent": _fmt_dt(b["qc_sent_at"]),
+            "QC Result Time": _fmt_dt(b["qc_result_at"]),
+            "QC Result": b["qc_result"] or ("Waiting" if b["qc_open"] else "Not sent"),
+            "QC Turnaround (h)": round(b["hours_at_qc"], 1) if b["qc_sent_at"] and b["hours_at_qc"] is not None else None,
+            "QC By": b["qc_by"],
+            "QC Note": b["qc_note"],
+            "Filled By": b["opened_by"],
+            "Emptied By": b["closed_by"],
+        })
+    return pd.DataFrame(rows)
+
+
 def _build_export_df(export_mode: str, horizon: str) -> pd.DataFrame:
+    if export_mode == EXPORT_MODES[2]:
+        return _build_qc_df(horizon)
+
     df_logs = crud.get_production_logs_df()
     df_logs = sheet_sync.filter_by_horizon(df_logs, horizon)
 
@@ -209,8 +273,7 @@ def export_xlsx(export_mode: str, horizon: str, columns: str = "",
     df = _build_export_df(export_mode, horizon)
     cols = [c for c in columns.split(",") if c] or list(df.columns)
     df = df[cols] if not df.empty else df
-    sheet_name = "KPI Summary" if "Aggregated" in export_mode else "Raw Audit Logs"
-    data = sheet_sync.workbook_bytes(df, sheet_name)
+    data = sheet_sync.workbook_bytes(df, _tab_name(export_mode))
     filename = sheet_sync.export_filename(export_mode, horizon, "xlsx")
     return Response(
         content=data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -233,7 +296,7 @@ def push(body: PushRequest, user: dict = Depends(require_ability("export_data"))
 
     final_df = df[body.columns].copy().astype(str)
     payload = final_df.to_dict(orient="records")
-    target_tab = "KPI Summary" if "Aggregated" in body.export_mode else "Raw Audit Logs"
+    target_tab = _tab_name(body.export_mode)
     wrapped = {"sheet_name": target_tab, "data": payload}
 
     try:

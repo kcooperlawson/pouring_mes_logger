@@ -79,6 +79,7 @@ def list_users(user: dict = Depends(require_admin_console)):
             target_lph=float(r["target_lph"]) if pd.notna(r.get("target_lph")) else None,
             is_locked=bool(is_locked), locked_minutes_left=minutes_left,
             failed_login_attempts=int(r.get("failed_login_attempts") or 0),
+            tour_seen=bool(r.get("tour_seen")) if pd.notna(r.get("tour_seen")) else True,
         ))
     return out
 
@@ -98,7 +99,7 @@ def create_user(body: CreateUserRequest, user: dict = Depends(require_admin_cons
                   email=_opt(row.get("email")), role=row["role"], shift=_opt(row.get("shift")),
                   target_lph=float(row["target_lph"]) if pd.notna(row.get("target_lph")) else None,
                   is_locked=False, locked_minutes_left=None,
-                  failed_login_attempts=0)
+                  failed_login_attempts=0, tour_seen=False)
 
 
 @router.put("/users/{user_id}/role-shift")
@@ -118,6 +119,16 @@ def reset_pin(user_id: int, body: ResetPinRequest, user: dict = Depends(require_
     if pin_err:
         raise HTTPException(status_code=400, detail=pin_err)
     crud.update_user_pin(user_id, body.pin)
+    return {"ok": True}
+
+
+@router.post("/users/{user_id}/show-tour")
+def show_tour(user_id: int, user: dict = Depends(require_admin_console)):
+    """The guided tour only launches on its own for a brand-new account - this
+    queues it for someone whose account already existed, the next time they
+    sign in."""
+    if not crud.set_tour_seen(user_id, False):
+        raise HTTPException(status_code=404, detail="User not found.")
     return {"ok": True}
 
 

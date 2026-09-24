@@ -13,6 +13,7 @@ class UserOut(BaseModel):
     is_locked: bool
     locked_minutes_left: int | None
     failed_login_attempts: int
+    tour_seen: bool = True
 
 
 class CreateUserRequest(BaseModel):

@@ -1,6 +1,12 @@
 import { api } from './client'
 
+export interface PackingLotsToday {
+  next_lot: string
+  today: { lot: string; resin: string }[]
+}
+
 export const packingApi = {
+  lotsToday: () => api.get<PackingLotsToday>('/packing/lots-today'),
   submit: (body: {
     cartridge_type: string
     resin: string

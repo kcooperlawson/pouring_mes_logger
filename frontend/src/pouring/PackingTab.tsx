@@ -1,5 +1,5 @@
-import { useMutation, useQuery } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { referenceApi } from '../api/reference'
 import { packingApi } from '../api/packing'
 import { useSubmitLock } from '../hooks/useSubmitLock'
@@ -30,11 +30,21 @@ export function PackingTab() {
   const submitLock = useSubmitLock()
   const asOperator = useDebugOperator()
   const toast = useToast()
+  const queryClient = useQueryClient()
   const resinsQuery = useQuery({ queryKey: ['reference', 'resins'], queryFn: referenceApi.resins })
+  const lotsQuery = useQuery({ queryKey: ['packing', 'lots-today'], queryFn: packingApi.lotsToday })
 
   const [cartLabel, setCartLabel] = useState(CART_LABELS[0])
   const [resin, setResin] = useState('')
-  const [lot, setLot] = useState(`LOT-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-01`)
+  const [lot, setLot] = useState('')
+  const [lotTouched, setLotTouched] = useState(false)
+  // The next unused LOT-<today>-NN from the server, not a hard-coded -01 -
+  // a second lot packed the same day used to land under the first one's
+  // number unless somebody noticed and edited it.
+  useEffect(() => {
+    if (!lotTouched && lotsQuery.data) setLot(lotsQuery.data.next_lot)
+  }, [lotsQuery.data, lotTouched])
+  const todaysLots = lotsQuery.data?.today ?? []
   const [unitsPacked, setUnitsPacked] = useState(500)
   const [notes, setNotes] = useState('')
 
@@ -51,6 +61,10 @@ export function PackingTab() {
       packingApi.submit({ cartridge_type: cartCode, resin, lot_number: lot, units_packed: unitsPacked, notes, as_operator: asOperator }),
     onSuccess: (resp) => {
       setNotes('')
+      // Keep the lot they just packed - the next entry is usually more of the
+      // same lot - but mark it chosen so the refreshed "next" doesn't replace it.
+      setLotTouched(true)
+      queryClient.invalidateQueries({ queryKey: ['packing', 'lots-today'] })
       submitLock.lock()
       toast.show(resp.message)
       playLogged()
@@ -68,7 +82,7 @@ export function PackingTab() {
     },
   })
 
-  const step1Done = !!cartLabel && !!resin && !!lot
+  const step1Done = !!cartLabel && !!resin && !!lot.trim()
   const step2Done = step1Done && unitsPacked > 0
 
   return (
@@ -96,7 +110,32 @@ export function PackingTab() {
 
           <div>
             <label className={label}>Batch Lot Number Being Packed</label>
-            <input className={input} value={lot} onChange={(e) => setLot(e.target.value)} />
+            <input className={input} value={lot} onChange={(e) => { setLotTouched(true); setLot(e.target.value) }} />
+            {(todaysLots.length > 0 || lotsQuery.data) && (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {todaysLots.length > 0 && <span className={`text-xs ${fl.muted}`}>Packed today:</span>}
+                {todaysLots.map((t) => (
+                  <button
+                    key={t.lot}
+                    type="button"
+                    onClick={() => { setLotTouched(true); setLot(t.lot) }}
+                    className={`rounded border px-2 py-0.5 text-xs ${lot === t.lot ? 'border-[var(--fl-accent)] text-[var(--fl-ink)]' : 'border-[var(--fl-border)] text-[var(--fl-body)]'}`}
+                    title={t.resin ? `${t.resin} - tap to keep packing this lot` : 'Tap to keep packing this lot'}
+                  >
+                    {t.lot}
+                  </button>
+                ))}
+                {lotsQuery.data && (
+                  <button
+                    type="button"
+                    onClick={() => { setLotTouched(true); setLot(lotsQuery.data!.next_lot) }}
+                    className="rounded border border-dashed border-[var(--fl-accent)] px-2 py-0.5 text-xs text-[var(--fl-accent-2)]"
+                  >
+                    + New lot ({lotsQuery.data.next_lot})
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </Step>
@@ -135,7 +174,7 @@ export function PackingTab() {
         ) : (
           <button
             className={`${btn} mt-3`}
-            disabled={!resin || unitsPacked <= 0 || submitMutation.isPending}
+            disabled={!resin || !lot.trim() || unitsPacked <= 0 || submitMutation.isPending}
             onClick={() => submitMutation.mutate()}
           >
             📦 SUBMIT PACKING LOG

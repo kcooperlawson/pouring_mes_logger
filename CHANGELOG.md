@@ -6,6 +6,24 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.34 — Wednesday, September 23, 2026
+### Getting ready for second shift: a packing lot bug fixed, a recap at the end of every shift, QC in the exports, and a handful of smaller fixes.
+
+**Packing could log two different lots under one lot number.** The lot box always opened on LOT-<today>-01. If a second lot got packed the same day and nobody changed the number, both went in as -01 - two batches, one lot on the record, which is the one thing a lot number is there to prevent. It now opens on the next unused number for today (-02, -03...), and shows the lots already packed today as buttons, so keeping on with the same lot is one tap and starting a new one is the default.
+
+**A recap at the end of the shift.** Signing out - or logging the end-of-shift photo - now shows a card first: units poured or packed, litres, yield, your best hour, how many of your weight checks landed in the band, where you finished against everybody else doing the same job today (a position, never anybody else's name), any badge you earned today, and how far it is to the next one. "Not yet" goes back to work. Nothing logged today means no card - it just signs out.
+
+**The guided tour, for people who already had accounts.** The tour only opens on its own for a brand-new account, and second shift's accounts already exist. IT Admin → Users now has "Show the guided tour": pick one person, or queue it for every operator and packer on a shift at once. It opens for them the next time they sign in, once.
+
+**Google Sheets export, finished properly.**
+- The page used to say "paste the script (ask your admin for it)." The script was sitting in the code the whole time and the page just never asked for it. The setup steps and a "Copy the script" button are on the page now, so linking a sheet no longer needs anybody else.
+- A third export: **QC & Batch History.** One row per filling of a vessel - vessel, resin, lot, pump, filled and emptied times, hours in the vessel, when QC was sent, the result, the turnaround in hours, who recorded it and their note. QC lives on the batch, not on any production log, which is why it was never in the other two. It works for Excel, CSV and pushing to a sheet, the same as the others.
+
+**Smaller things:**
+- The Downtime tab remembers the station and reason from your last stop today. Never the minutes or the notes - those are about that one stop.
+- The "this pump was already checked today" override asks who did it from the roster instead of a free-text box, so the audit record doesn't end up with "Maria", "maria g." and a nickname as three people. "Someone else" still takes a typed name.
+- The Suggestions inbox shows what's open and in review by default. Resolved items are one tab over instead of burying the open ones.
+
 ## 3.33 — Wednesday, September 23, 2026
 ### An interactive guide walks anyone new through their first shift, and two real timing bugs got fixed.
 

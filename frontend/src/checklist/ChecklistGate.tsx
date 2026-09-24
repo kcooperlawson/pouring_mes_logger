@@ -10,6 +10,7 @@ import { fl } from '../theme'
 const input = `${fl.input} py-3 text-base font-normal text-[var(--fl-ink)]`
 const btn = `${fl.btn} w-full py-3`
 const panel = fl.card
+const OTHER = '__other__'
 
 interface Props {
   role: string
@@ -46,6 +47,11 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
     queryFn: () => checklistApi.status(effectiveStation, shift),
     enabled: !!effectiveStation && (role === 'operator' || role === 'packer'),
   })
+  const operatorsQuery = useQuery({
+    queryKey: ['reference', 'floor-staff'],
+    queryFn: referenceApi.floorStaff,
+    enabled: role === 'operator' || role === 'packer',
+  })
   const vesselQuery = useQuery({
     queryKey: ['checklist', 'vessel-options', effectiveStation],
     queryFn: () => checklistApi.vesselOptions(effectiveStation),
@@ -59,6 +65,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
   const [qrChecked, setQrChecked] = useState(false)
   const [materialsChecked, setMaterialsChecked] = useState(false)
   const [alreadyWho, setAlreadyWho] = useState('')
+  const [whoIsOther, setWhoIsOther] = useState(false)
   // Reopened on purpose after it was already completed. The checklist screen
   // carries the pump startup form link, and an operator moving to a second
   // pump needs that link again - the screen itself won't come back on its
@@ -198,12 +205,31 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
           🕒 Temporary: this pump was already checked today
         </summary>
         <div className="mt-2 flex flex-col gap-2">
-          <input
+          {/* A pick from the roster, not free text - "Maria", "maria g." and a
+              nickname are three different people in the audit record. "Someone
+              else" still allows a name the roster doesn't have yet. */}
+          <select
             className={input}
-            placeholder="Who actually completed the checklist? e.g. Maria"
-            value={alreadyWho}
-            onChange={(e) => setAlreadyWho(e.target.value)}
-          />
+            value={whoIsOther ? OTHER : alreadyWho}
+            onChange={(e) => {
+              if (e.target.value === OTHER) { setWhoIsOther(true); setAlreadyWho('') }
+              else { setWhoIsOther(false); setAlreadyWho(e.target.value) }
+            }}
+          >
+            <option value="">— who completed the checklist? —</option>
+            {(operatorsQuery.data ?? []).map((n) => (
+              <option key={n} value={n}>{n}</option>
+            ))}
+            <option value={OTHER}>Someone else…</option>
+          </select>
+          {whoIsOther && (
+            <input
+              className={input}
+              placeholder="Their full name"
+              value={alreadyWho}
+              onChange={(e) => setAlreadyWho(e.target.value)}
+            />
+          )}
           <button
             className={btn}
             disabled={!alreadyWho.trim() || overrideMutation.isPending}

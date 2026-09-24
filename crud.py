@@ -1073,15 +1073,68 @@ def create_user(username: str, email: str, pin: str, full_name: str, role: str, 
         session.close()
 
 
-def mark_tour_seen(user_id: int):
+def last_downtime_for_operator(operator_name: str, on_date=None) -> dict:
+    """This operator's most recent downtime entry today - station and reason
+    only, never the minutes or the notes, which are about that one stop."""
+    on_date = on_date or date.today()
+    session = ScopedSession()
+    try:
+        row = session.query(DowntimeLog.pump_station, DowntimeLog.reason).filter(
+            DowntimeLog.operator_name == operator_name,
+            DowntimeLog.date == on_date).order_by(DowntimeLog.id.desc()).first()
+    finally:
+        session.close()
+    if not row:
+        return {"found": False, "station": "", "reason": ""}
+    return {"found": True, "station": row[0] or "", "reason": row[1] or ""}
+
+
+def packing_lots_today(on_date=None) -> dict:
+    """Lots already packed today, and the next unused LOT-YYYYMMDD-NN number.
+
+    The packing form used to open on LOT-<today>-01 every time, so a second
+    lot packed the same day went in under the first lot's number unless the
+    packer noticed and changed it - two different batches, one lot on the
+    record, which is the exact thing a lot number exists to prevent.
+    """
+    on_date = on_date or date.today()
+    prefix = f"LOT-{on_date.strftime('%Y%m%d')}-"
+    session = ScopedSession()
+    try:
+        rows = session.query(ProductionLog.lot_number, ProductionLog.resin_type).filter(
+            ProductionLog.date == on_date,
+            ProductionLog.log_type == "Packing Count").order_by(ProductionLog.id.desc()).all()
+    finally:
+        session.close()
+    seen, lots, highest = set(), [], 0
+    for lot, resin in rows:
+        lot = (lot or "").strip()
+        if not lot or lot in seen:
+            continue
+        seen.add(lot)
+        lots.append({"lot": lot, "resin": resin or ""})
+        if lot.upper().startswith(prefix):
+            tail = lot[len(prefix):]
+            if tail.isdigit():
+                highest = max(highest, int(tail))
+    return {"next_lot": f"{prefix}{highest + 1:02d}", "today": lots}
+
+
+def set_tour_seen(user_id: int, seen: bool) -> bool:
     session = ScopedSession()
     try:
         user = session.query(User).filter(User.id == user_id).first()
-        if user:
-            user.tour_seen = True
-            session.commit()
+        if not user:
+            return False
+        user.tour_seen = bool(seen)
+        session.commit()
+        return True
     finally:
         session.close()
+
+
+def mark_tour_seen(user_id: int):
+    set_tour_seen(user_id, True)
 
 
 def update_user_target(user_id: int, target_lph: float):
@@ -1143,6 +1196,16 @@ def get_all_users_df() -> pd.DataFrame:
     session = ScopedSession()
     try:
         return pd.read_sql(session.query(User).order_by(User.role, User.full_name).statement, session.bind)
+    finally:
+        session.close()
+
+
+def get_floor_staff_names() -> list:
+    """Operators and packers, by name - who can have done a startup checklist."""
+    session = ScopedSession()
+    try:
+        rows = session.query(User.full_name).filter(User.role.in_(("operator", "packer")))             .order_by(User.full_name).all()
+        return [r[0] for r in rows]
     finally:
         session.close()
 

@@ -11,6 +11,7 @@ export interface AdminUser {
   is_locked: boolean
   locked_minutes_left: number | null
   failed_login_attempts: number
+  tour_seen: boolean
 }
 
 export interface CreateUserRequest {
@@ -172,6 +173,7 @@ export const adminApi = {
   updateRoleShift: (id: number, role: string, shift: string) => api.put(`/admin/users/${id}/role-shift`, { role, shift }),
   resetPin: (id: number, pin: string) => api.put(`/admin/users/${id}/pin`, { pin }),
   unlockUser: (id: number) => api.post(`/admin/users/${id}/unlock`),
+  showTour: (id: number) => api.post(`/admin/users/${id}/show-tour`),
   deleteUser: (id: number) => api.del(`/admin/users/${id}`),
 
   userAbilities: (id: number) => api.get<UserAbilities>(`/admin/users/${id}/abilities`),

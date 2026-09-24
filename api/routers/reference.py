@@ -77,6 +77,14 @@ def downtime_reasons(user: dict = Depends(get_current_user)):
     return crud.get_downtime_reasons()
 
 
+@router.get("/reference/floor-staff", response_model=list[str])
+def floor_staff(user: dict = Depends(get_current_user)):
+    """Names only, for the checklist gate's "already checked by" picker - an
+    operator can't reach active-operators (that one backs manager Debug
+    Mode), but naming the coworker who did the check has to work for them."""
+    return crud.get_floor_staff_names()
+
+
 @router.get("/reference/active-operators", response_model=list[str])
 def active_operators(user: dict = Depends(require_role("manager", "admin"))):
     """Backs the "Impersonate Operator for Testing" picker in Debug Mode -
