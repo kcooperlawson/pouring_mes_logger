@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, Droplets, PowerOff, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { logManagementApi } from '../api/logManagement'
 import { fl } from '../theme'
@@ -15,8 +16,10 @@ function BulkDeletePanel({ matchCount, onConfirm, pending }: { matchCount: numbe
   const [text, setText] = useState('')
   const armed = text.trim() === 'DELETE'
   return (
-    <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">☢️ Bulk Delete — every record matching the filters above</summary>
+    <details className={`${card} border-red-900/60`}>
+      <summary className="flex cursor-pointer items-center gap-1.5 text-sm font-medium text-red-300">
+        <AlertTriangle size={15} className="shrink-0" /> Bulk Delete — every record matching the filters above
+      </summary>
       <p className={`mt-2 text-xs ${fl.muted}`}>
         This will permanently delete all <b>{matchCount}</b> record(s) currently matched by the filters above,
         not just the ones visible on screen.
@@ -74,26 +77,27 @@ function ProductionLogsTab() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
-        <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
-              value={startDate} placeholder="From date" onChange={(e) => setStartDate(e.target.value)} />
-        <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
-              value={endDate} placeholder="To date" onChange={(e) => setEndDate(e.target.value)} />
-        <select className={input} value={logType} onChange={(e) => setLogType(e.target.value)}>
-          <option>All Types</option>
-          {data.filters.log_types.map((t) => <option key={t}>{t}</option>)}
-        </select>
-        <select className={input} value={pump} onChange={(e) => setPump(e.target.value)}>
-          <option>All Pumps</option>
-          {data.filters.pumps.map((p) => <option key={p}>{p}</option>)}
-        </select>
-        <select className={input} value={operator} onChange={(e) => setOperator(e.target.value)}>
-          <option>All Operators</option>
-          {data.filters.operators.map((o) => <option key={o}>{o}</option>)}
-        </select>
+      <div className={card}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-5">
+          <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
+                value={startDate} placeholder="From date" onChange={(e) => setStartDate(e.target.value)} />
+          <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
+                value={endDate} placeholder="To date" onChange={(e) => setEndDate(e.target.value)} />
+          <select className={input} value={logType} onChange={(e) => setLogType(e.target.value)}>
+            <option>All Types</option>
+            {data.filters.log_types.map((t) => <option key={t}>{t}</option>)}
+          </select>
+          <select className={input} value={pump} onChange={(e) => setPump(e.target.value)}>
+            <option>All Pumps</option>
+            {data.filters.pumps.map((p) => <option key={p}>{p}</option>)}
+          </select>
+          <select className={input} value={operator} onChange={(e) => setOperator(e.target.value)}>
+            <option>All Operators</option>
+            {data.filters.operators.map((o) => <option key={o}>{o}</option>)}
+          </select>
+        </div>
+        <p className={`mt-2 text-sm ${fl.muted}`}><b className="text-[var(--fl-ink)]">{data.total_matches}</b> record(s) match the current filters.</p>
       </div>
-
-      <p className={`text-sm ${fl.muted}`}><b className="text-white">{data.total_matches}</b> record(s) match the current filters.</p>
 
       {data.total_matches === 0 ? (
         <p className={`text-sm ${fl.muted}`}>No records match the current filters.</p>
@@ -119,10 +123,10 @@ function ProductionLogsTab() {
                 <tbody>
                   {data.rows.map((r) => (
                     <tr key={r.id} className={fl.tableRow}>
-                      <td className="py-1 pr-2 whitespace-nowrap text-[#CBD5E1]">{fmt(r.timestamp)}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{r.log_type}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ pump: r.pump_station }}>{r.pump_station}</Drill></td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">
+                      <td className="py-1 pr-2 whitespace-nowrap text-[var(--fl-body)]">{fmt(r.timestamp)}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{r.log_type}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ pump: r.pump_station }}>{r.pump_station}</Drill></td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">
                         {r.resin_type && (
                           <span className="inline-flex items-center gap-1.5">
                             <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: r.resin_color ?? '#9AA3AE' }} />
@@ -130,8 +134,8 @@ function ProductionLogsTab() {
                           </span>
                         )}
                       </td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ operator: r.operator_name }}>{r.operator_name}</Drill></td>
-                      <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.bottles_filled.toLocaleString()}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ operator: r.operator_name }}>{r.operator_name}</Drill></td>
+                      <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.bottles_filled.toLocaleString()}</td>
                       <td className="py-1 pr-2">
                         <button
                           className={fl.btnSecondary}
@@ -194,22 +198,23 @@ function DowntimeLogsTab() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
-        <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
-              value={startDate} placeholder="From date" onChange={(e) => setStartDate(e.target.value)} />
-        <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
-              value={endDate} placeholder="To date" onChange={(e) => setEndDate(e.target.value)} />
-        <select className={input} value={pump} onChange={(e) => setPump(e.target.value)}>
-          <option>All Pumps</option>
-          {data.filters.pumps.map((p) => <option key={p}>{p}</option>)}
-        </select>
-        <select className={input} value={reason} onChange={(e) => setReason(e.target.value)}>
-          <option>All Reasons</option>
-          {data.filters.reasons.map((r) => <option key={r}>{r}</option>)}
-        </select>
+      <div className={card}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-4">
+          <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
+                value={startDate} placeholder="From date" onChange={(e) => setStartDate(e.target.value)} />
+          <input className={input} type="date" min={data.filters.min_date ?? undefined} max={data.filters.max_date ?? undefined}
+                value={endDate} placeholder="To date" onChange={(e) => setEndDate(e.target.value)} />
+          <select className={input} value={pump} onChange={(e) => setPump(e.target.value)}>
+            <option>All Pumps</option>
+            {data.filters.pumps.map((p) => <option key={p}>{p}</option>)}
+          </select>
+          <select className={input} value={reason} onChange={(e) => setReason(e.target.value)}>
+            <option>All Reasons</option>
+            {data.filters.reasons.map((r) => <option key={r}>{r}</option>)}
+          </select>
+        </div>
+        <p className={`mt-2 text-sm ${fl.muted}`}><b className="text-[var(--fl-ink)]">{data.total_matches}</b> record(s) match the current filters.</p>
       </div>
-
-      <p className={`text-sm ${fl.muted}`}><b className="text-white">{data.total_matches}</b> record(s) match the current filters.</p>
 
       {data.total_matches === 0 ? (
         <p className={`text-sm ${fl.muted}`}>No records match the current filters.</p>
@@ -234,11 +239,11 @@ function DowntimeLogsTab() {
                 <tbody>
                   {data.rows.map((r) => (
                     <tr key={r.id} className={fl.tableRow}>
-                      <td className="py-1 pr-2 whitespace-nowrap text-[#CBD5E1]">{fmt(r.timestamp)}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ pump: r.pump_station }}>{r.pump_station}</Drill></td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]">{r.reason}</td>
-                      <td className="py-1 pr-2 text-right text-[#CBD5E1]">{r.duration_min}</td>
-                      <td className="py-1 pr-2 text-[#CBD5E1]"><Drill f={{ operator: r.operator_name }}>{r.operator_name}</Drill></td>
+                      <td className="py-1 pr-2 whitespace-nowrap text-[var(--fl-body)]">{fmt(r.timestamp)}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ pump: r.pump_station }}>{r.pump_station}</Drill></td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]">{r.reason}</td>
+                      <td className="py-1 pr-2 text-right text-[var(--fl-body)]">{r.duration_min}</td>
+                      <td className="py-1 pr-2 text-[var(--fl-body)]"><Drill f={{ operator: r.operator_name }}>{r.operator_name}</Drill></td>
                       <td className="py-1 pr-2">
                         <button
                           className={fl.btnSecondary}
@@ -273,18 +278,27 @@ function DowntimeLogsTab() {
 export function LogManagementPage() {
   const [tab, setTab] = useState<'production' | 'downtime'>('production')
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>🗑️ Log Management &amp; Data Cleanup</h1>
-      <p className="rounded-lg border border-amber-800 bg-amber-950 px-3 py-2 text-sm text-amber-200">
-        ⚠️ Deletions here are <b>permanent</b> and cannot be undone. Deleting a production log automatically
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <div>
+        <h1 className="flex items-center gap-2 text-xl font-bold text-[var(--fl-ink)] sm:text-2xl">
+          <Trash2 size={22} className="shrink-0 text-[var(--fl-accent-2)]" /> Log Management &amp; Data Cleanup
+        </h1>
+        <p className={`mt-1 text-sm ${fl.muted}`}>Finding and permanently removing bad or test log entries.</p>
+      </div>
+      <p className="flex items-start gap-2 rounded-lg border border-amber-800 bg-amber-950 px-3 py-2 text-sm text-amber-200">
+        <AlertTriangle size={16} className="mt-0.5 shrink-0" />
+        Deletions here are <b>permanent</b> and cannot be undone. Deleting a production log automatically
         re-syncs the progress of whatever Work Order it was counted against, so totals stay accurate after
         cleanup.
       </p>
 
       <div className={fl.tabStrip}>
-        {([['production', '💧 Production Logs (Pouring / Packing)'], ['downtime', '⛔ Downtime Logs']] as const).map(([key, label]) => (
-          <button key={key} onClick={() => setTab(key)} className={tab === key ? fl.tabActive : fl.tabInactive}>
-            {label}
+        {([
+          ['production', 'Production Logs (Pouring / Packing)', Droplets],
+          ['downtime', 'Downtime Logs', PowerOff],
+        ] as const).map(([key, label, Icon]) => (
+          <button key={key} onClick={() => setTab(key)} className={`flex items-center gap-1.5 ${tab === key ? fl.tabActive : fl.tabInactive}`}>
+            <Icon size={14} className="shrink-0" /> {label}
           </button>
         ))}
       </div>

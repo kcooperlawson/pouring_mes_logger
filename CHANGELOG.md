@@ -6,6 +6,17 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.30 — Wednesday, September 23, 2026
+### Historical and Log Management look like the same app as Cockpit and Live SCADA now.
+
+Second batch of the visual redesign pass - same rule as 3.29: nothing here changes what a page shows or does, only how it looks.
+
+**Historical Production Trends** gets the icon header, banded sections and gradient sparkline chart Live SCADA already uses, instead of its own plain heading and a hand-drawn line chart with none of that shared styling. The filters sit in a card now instead of floating loose above the numbers.
+
+**Log Management & Data Cleanup** gets the same icon header treatment, its filter rows moved into cards, and icons on its tabs and bulk-delete warning instead of plain text and emoji. The table underneath - already using the shared table styling from an earlier pass - is unchanged.
+
+Six manager pages left in this batch: Roster, Google Sync, Lot Verification, Assigned Runs, Analytics Hub, Resin Canvas.
+
 ## 3.29 — Wednesday, September 23, 2026
 ### Downtime and Packing look like the same app as Pouring now.
 
