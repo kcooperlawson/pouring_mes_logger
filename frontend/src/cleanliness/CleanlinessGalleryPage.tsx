@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Camera } from 'lucide-react'
+import { PageHeader } from '../shell/PageHeader'
 import { cleanlinessApi } from '../api/cleanliness'
 import { fl } from '../theme'
 
@@ -25,29 +27,29 @@ export function CleanlinessGalleryPage() {
   const audits = auditsQuery.data ?? []
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>📸 Cleanliness &amp; Station Photo Gallery</h1>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <PageHeader icon={Camera} title="Cleanliness & Photo Audits" subtitle="The photos operators took of their stations." />
 
       {stats && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{stats.total_audits}</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{stats.total_audits}</p>
             <p className={`text-xs ${fl.muted}`}>All Photo Audits</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{stats.start_checks}</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{stats.start_checks}</p>
             <p className={`text-xs ${fl.muted}`}>Start Shift Checks</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{stats.end_checks}</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{stats.end_checks}</p>
             <p className={`text-xs ${fl.muted}`}>End Shift Checks</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{stats.transfers}</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{stats.transfers}</p>
             <p className={`text-xs ${fl.muted}`}>Pump Transfers</p>
           </div>
           <div className={tile} style={stats.spills > 0 ? { borderColor: '#EF4444' } : undefined}>
-            <p className={`text-lg font-semibold ${stats.spills > 0 ? 'text-red-400' : 'text-white'}`}>{stats.spills}</p>
+            <p className={`text-lg font-semibold ${stats.spills > 0 ? 'text-red-400' : 'text-[var(--fl-ink)]'}`}>{stats.spills}</p>
             <p className={`text-xs ${fl.muted}`}>Spills / Issues</p>
           </div>
         </div>
@@ -84,7 +86,7 @@ export function CleanlinessGalleryPage() {
               <p className={`text-xs ${fl.muted}`}>
                 📅 {new Date(a.timestamp).toLocaleString()} · 👤 {a.operator_name}
               </p>
-              <p className="mt-1 text-sm italic text-[#CBD5E1]">
+              <p className="mt-1 text-sm italic text-[var(--fl-body)]">
                 {a.notes || 'No additional operator notes logged.'}
               </p>
               <button

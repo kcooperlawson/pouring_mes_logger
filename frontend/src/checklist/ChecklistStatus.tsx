@@ -44,7 +44,7 @@ export function ChecklistStatus({ compact = false }: { compact?: boolean }) {
   return (
     <div className={fl.card}>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-white">
+        <p className="text-sm font-semibold text-[var(--fl-ink)]">
           🧾 Checks {query.data?.scope === 'everyone' ? '— everyone' : '— yours'}
         </p>
         <div className="flex items-center gap-2">

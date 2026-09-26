@@ -269,6 +269,12 @@ button:not(:disabled):active {
   to   { transform: scaleX(1); }
 }
 
+/* Column charts - the vertical twin of fl-bar-grow. */
+@keyframes fl-grow-up {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
 /* Switching manager screens. Short on purpose: this happens all day. */
 @keyframes fl-page-in {
   from { transform: translateY(6px); opacity: 0; }

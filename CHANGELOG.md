@@ -6,6 +6,25 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.29 — Friday, September 25, 2026
+**A redesign day for the screens operators actually use: the startup checklist, a tab bar on phones, a calmer Pouring tab, a Summary that's worth opening, and the last manager pages brought in line.**
+
+Same rule as the last redesign: nothing here adds or removes a step. Every field, check and button is still there and still does what it did. Installs over 3.28 or anything older.
+
+### Operators
+
+- **The startup checklist is step cards now.** Before, it was a big red "terminal locked" block that looked like an error. Now it opens with "N quick steps before you start" and uses the same numbered cards as Pouring: your pump, the start-of-shift photo, then the final check with a "Start my shift" button. The photo is a big tap target instead of a small file button. The "someone already did this pump's checklist today" override is still there, folded away at the bottom where it can't be tapped by accident.
+- **A tab bar at the bottom on phones.** Pouring, Downtime, Audit and Summary sit where your thumb already is, with icons and the Audit badge. Desktops and tablets keep the tabs across the top. Toasts moved up so they don't land on the tab bar, and the tour knows how to find a tab in either place.
+- **Pouring is calmer.** The count is one big "Good units filled" box with −10 and +10 buttons either side. Scrap, check weight and notes are folded into "More details", which tells you what's in there ("no scrap · not weighed") without opening it, and opens by itself whenever any of them has something in it. Nothing was removed; it's just not all shouting at once.
+- **Found and fixed while doing it: the Submit bar was never actually sticky.** The page's outer box was set to hide overflow, and that quietly turns off `position: sticky` for everything inside it, so the Submit button just sat at the bottom of the form. It stays in view now, right above the tab bar on a phone.
+- **Summary is a dashboard now.** It loads straight away instead of behind a "View My Shift Summary" button: today's units in big numbers, yield, scrap and your best hour as tiles, then an hour-by-hour chart with the best hour lit up, and splits by resin and by container. Career badges are still there, folded at the bottom.
+- **Account & Preferences got a tidy-up.** Icon tabs (Account, Look, Feedback, What's new), a proper close button, and the tour button is a card you can't miss. Same settings as before.
+
+### Managers
+
+- **Scrap & Yield, Batch History, Cleanliness & Photo Audits and Checklist & Audit Status** now open with the same icon header as the Cockpit (one shared `PageHeader` component, so they can't drift apart again) and plainer titles, and sit in the same centred width as the rest.
+- **IT Admin's Database, Plant configuration and Crash reports tabs** lost the emoji in their headings and use the theme's colours instead of hard-coded ones. Backup status uses coloured dots, and the warnings use proper icons.
+
 ## 3.28 — Wednesday, September 23, 2026
 **Getting ready for second shift: clearer photo checks, a redesign of every screen that still looked old, a guided tour for anyone new, a recap at the end of each shift, QC in the exports, and a packing lot bug fixed.**
 

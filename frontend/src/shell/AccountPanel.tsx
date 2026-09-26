@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Compass, KeyRound, Lightbulb, Palette, ScrollText, Settings, X, type LucideIcon } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { accountApi, FEEDBACK_CATEGORIES, type MyFeedback } from '../api/account'
 import { ApiError } from '../api/client'
@@ -20,11 +21,11 @@ const STATUS_COLOR: Record<string, string> = {
 
 type PanelTab = 'security' | 'avatar' | 'feedback' | 'whatsnew'
 
-const TABS: { key: PanelTab; label: string }[] = [
-  { key: 'security', label: '🔑 Security' },
-  { key: 'avatar', label: '🎨 Theme & Avatar' },
-  { key: 'feedback', label: '💡 Feedback' },
-  { key: 'whatsnew', label: '📜 What’s new' },
+const TABS: { key: PanelTab; label: string; icon: LucideIcon }[] = [
+  { key: 'security', label: 'Account', icon: KeyRound },
+  { key: 'avatar', label: 'Look', icon: Palette },
+  { key: 'feedback', label: 'Feedback', icon: Lightbulb },
+  { key: 'whatsnew', label: 'What’s new', icon: ScrollText },
 ]
 
 function SecurityTab() {
@@ -46,7 +47,7 @@ function SecurityTab() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-semibold text-[var(--fl-ink)]">Update Account Credentials</p>
+      <p className="text-sm font-semibold text-[var(--fl-ink)]">Your name, username and PIN</p>
       <label className={`block ${fl.label}`}>Full Display Name</label>
       <input className={input} value={fullName} onChange={(e) => setFullName(e.target.value)} />
       <label className={`block ${fl.label}`}>Username / ID</label>
@@ -59,7 +60,7 @@ function SecurityTab() {
         </p>
       )}
       <button className={`${fl.btn} mt-1`} disabled={!fullName.trim() || !username.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-        💾 Save Credentials
+        Save
       </button>
     </div>
   )
@@ -210,7 +211,7 @@ function AvatarTab() {
         </p>
       )}
       <button className={`${fl.btn} self-start`} disabled={!file || mutation.isPending} onClick={() => mutation.mutate()}>
-        💾 Save Avatar
+        Save picture
       </button>
     </div>
   )
@@ -250,7 +251,7 @@ function FeedbackTab() {
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-semibold text-[var(--fl-ink)]">Universal Feedback Box</p>
+      <p className="text-sm font-semibold text-[var(--fl-ink)]">Send feedback to management</p>
       <p className={`text-xs ${fl.muted}`}>Signed as {user?.full_name}</p>
       <select className={select} value={category} onChange={(e) => setCategory(e.target.value)}>
         {FEEDBACK_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
@@ -260,12 +261,12 @@ function FeedbackTab() {
         value={text} onChange={(e) => setText(e.target.value)}
       />
       <button className={`${fl.btn} self-start`} disabled={!text.trim() || mutation.isPending} onClick={() => mutation.mutate()}>
-        🚀 Submit Feedback
+        Send feedback
       </button>
 
       {history.length > 0 && (
         <div className="mt-2 flex flex-col gap-2">
-          <p className="text-sm font-semibold text-[var(--fl-ink)]">📬 My Submitted Feedback</p>
+          <p className="text-sm font-semibold text-[var(--fl-ink)]">What you've sent</p>
           {history.map((row) => <FeedbackHistoryRow key={row.id} row={row} />)}
         </div>
       )}
@@ -304,24 +305,29 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
       ref={ref}
       className="fixed inset-x-4 top-20 z-50 rounded-lg border border-[var(--fl-border)] bg-[var(--fl-surface)] p-4 shadow-[0_12px_32px_rgba(0,0,0,0.55)] sm:inset-x-auto sm:left-auto sm:right-6 sm:w-[26rem]"
     >
-      <div className="mb-1 flex items-center justify-between">
-        <p className={fl.heading}>⚙️ Account & Preferences</p>
-        <button onClick={onClose} className={`${fl.muted} text-lg leading-none hover:text-[var(--fl-ink)]`} aria-label="Close">✕</button>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="flex items-center gap-2 text-base font-bold text-[var(--fl-ink)]">
+          <Settings size={17} className="text-[var(--fl-accent-2)]" /> Account &amp; Preferences
+        </p>
+        <button onClick={onClose} className={`${fl.muted} rounded p-1 hover:bg-[var(--fl-overlay-weak)] hover:text-[var(--fl-ink)]`} aria-label="Close">
+          <X size={18} />
+        </button>
       </div>
       <button
         onClick={() => { onClose(); requestTour() }}
-        className={`mb-2 text-left text-xs font-semibold text-[var(--fl-accent-2)] hover:underline`}
+        className="mb-3 flex w-full items-center gap-2 rounded-lg border border-[var(--fl-accent)]/40 bg-[var(--fl-accent-wash)] px-3 py-2 text-left text-sm font-semibold text-[var(--fl-ink)] hover:border-[var(--fl-accent)]"
       >
-        🧭 Take the interactive tour
+        <Compass size={16} className="shrink-0 text-[var(--fl-accent-2)]" /> Take the interactive tour
       </button>
-      <div className="flex gap-4 border-b border-[var(--fl-border)]">
+      <div className="grid grid-cols-4 gap-1 rounded-lg bg-black/20 p-1">
         {TABS.map((t) => (
           <button
             key={t.key} onClick={() => setTab(t.key)}
-            className={`-mb-px border-b-2 pb-2 text-sm font-semibold ${
-              tab === t.key ? 'border-[var(--fl-accent)] text-[var(--fl-ink)]' : `border-transparent ${fl.muted} hover:text-[var(--fl-body)]`
+            className={`flex flex-col items-center gap-0.5 rounded-md py-1.5 text-[0.7rem] font-semibold transition-colors ${
+              tab === t.key ? 'bg-[var(--fl-raised)] text-[var(--fl-ink)] shadow' : `${fl.muted} hover:text-[var(--fl-body)]`
             }`}
           >
+            <t.icon size={16} />
             {t.label}
           </button>
         ))}

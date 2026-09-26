@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { ChevronDown, Minus, Plus } from 'lucide-react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { pouringApi } from '../api/pouring'
 import { describe, judge } from './fillWeight'
@@ -38,9 +39,12 @@ interface Props {
   checkWeightG: number | null
   onCheckWeightChange: (n: number | null) => void
   weightSpec: WeightSpec | null
+  /** Anything else optional (the notes box) - goes in the same fold. */
+  extra?: ReactNode
+  extraFilled?: boolean
 }
 
-const input = `${fl.input} py-3 text-base font-normal text-[#F8FAFC]`
+const input = `${fl.input} py-3 text-base font-normal text-[var(--fl-ink)]`
 const label = `mb-1 block ${fl.label}`
 
 // Ported from pouring_tab.py lines ~530-655: bulk-vs-unit output, scrap, and
@@ -59,7 +63,7 @@ function needlePct(measured: number, spec: { min_g: number; max_g: number }): nu
 export function ProductionOutputFields({
   station, resin, isBulk, bulk, onBulkChange, onBulkBlockedChange,
   bottlesFilled, onBottlesFilledChange, scrapEmpty, onScrapEmptyChange,
-  scrapFilled, onScrapFilledChange, checkWeightG, onCheckWeightChange, weightSpec,
+  scrapFilled, onScrapFilledChange, checkWeightG, onCheckWeightChange, weightSpec, extra, extraFilled,
 }: Props) {
   const debouncedBulk = useDebouncedValue(bulk, 300)
   const bulkPreview = useQuery({
@@ -81,12 +85,21 @@ export function ProductionOutputFields({
   const weightVerdict = judge(checkWeightG, weightSpec)
   const { icon, message } = describe(weightVerdict)
 
+  // Scrap, the check weight and notes are all optional and most hours none of
+  // them are touched - folded away so the count is what the eye lands on.
+  // Opens by itself whenever any of them already holds something, so a value
+  // is never hidden behind a closed fold.
+  const anyExtra = scrapEmpty > 0 || scrapFilled > 0 || checkWeightG != null || !!extraFilled
+  const [open, setOpen] = useState(anyExtra)
+  useEffect(() => { if (anyExtra) setOpen(true) }, [anyExtra])
+  const extrasSummary = [
+    scrapEmpty + scrapFilled > 0 ? `${scrapEmpty + scrapFilled} scrap` : 'no scrap',
+    checkWeightG != null ? `${checkWeightG} g weighed` : 'not weighed',
+  ].join(' · ')
+  const step = (d: number) => onBottlesFilledChange(Math.max(0, (bottlesFilled || 0) + d))
+
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="text-sm font-semibold text-[#CBD5E1]">
-        3. Production Output
-      </h3>
-
       {isBulk ? (
         <div className="flex flex-col gap-2">
           <div className="grid grid-cols-3 gap-2">
@@ -130,7 +143,7 @@ export function ProductionOutputFields({
             onChange={(e) => onBulkChange({ note: e.target.value })}
           />
 
-          <label className="flex items-center gap-2 text-sm text-[#CBD5E1]">
+          <label className="flex items-center gap-2 text-sm text-[var(--fl-body)]">
             <input
               type="checkbox"
               checked={bulk.offTank}
@@ -140,7 +153,7 @@ export function ProductionOutputFields({
           </label>
 
           {bulkPreview.data && bulkPreview.data.litres > 0 && (
-            <p className="text-sm font-medium text-[#CBD5E1]">
+            <p className="text-sm font-medium text-[var(--fl-body)]">
               {bulkPreview.data.description}
             </p>
           )}
@@ -158,22 +171,48 @@ export function ProductionOutputFields({
         </div>
       ) : (
         <div>
-          <label className={label}>✅ Good Units / Containers Filled</label>
-          <input
-            className={input}
-            data-fl-count-field
-            type="number"
-            min={0}
-            step={10}
-            value={bottlesFilled || ''}
-            onChange={(e) => onBottlesFilledChange(Number(e.target.value))}
-          />
+          <label className={label}>Good units filled</label>
+          <div className="flex items-stretch gap-2">
+            <button type="button" aria-label="10 fewer" onClick={() => step(-10)}
+                    className={`${fl.btnSecondary} flex w-14 shrink-0 items-center justify-center`}>
+              <Minus size={18} />
+            </button>
+            <input
+              className={`${fl.input} min-w-0 flex-1 py-3 text-center text-3xl font-extrabold tabular-nums text-[var(--fl-ink)]`}
+              data-fl-count-field
+              type="number"
+              inputMode="numeric"
+              min={0}
+              step={10}
+              value={bottlesFilled || ''}
+              placeholder="0"
+              onChange={(e) => onBottlesFilledChange(Number(e.target.value))}
+            />
+            <button type="button" aria-label="10 more" onClick={() => step(10)}
+                    className={`${fl.btnSecondary} flex w-14 shrink-0 items-center justify-center`}>
+              <Plus size={18} />
+            </button>
+          </div>
         </div>
       )}
 
+      <div className="rounded-lg border border-[var(--fl-border)]">
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm"
+        >
+          <span className="font-semibold text-[var(--fl-ink)]">More details</span>
+          <span className={`flex items-center gap-1.5 text-xs ${fl.muted}`}>
+            {extrasSummary}
+            <ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+          </span>
+        </button>
+        {open && (
+        <div className="flex flex-col gap-3 border-t border-[var(--fl-border)] p-3">
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className={label}>🗑️ Scrap Empty</label>
+          <label className={label}>Scrap empty</label>
           <input
             className={input}
             type="number"
@@ -183,7 +222,7 @@ export function ProductionOutputFields({
           />
         </div>
         <div>
-          <label className={label}>🗑️ Scrap Filled</label>
+          <label className={label}>Scrap filled</label>
           <input
             className={input}
             type="number"
@@ -195,7 +234,7 @@ export function ProductionOutputFields({
       </div>
 
       <div>
-        <label className={label}>⚖️ Check weight (g) — optional</label>
+        <label className={label}>Check weight (g)</label>
         <p className={`mb-1 text-xs ${fl.muted}`}>
           Weigh one filled cartridge and type what the scale says. It scores how close your fills are landing to
           target — nothing here can stop a pour.
@@ -242,10 +281,14 @@ export function ProductionOutputFields({
                 </div>
               </div>
             )}
-            <p className="mt-1 text-sm font-medium text-[#F8FAFC]">
+            <p className="mt-1 text-sm font-medium text-[var(--fl-ink)]">
               {icon} {message}
             </p>
           </>
+        )}
+      </div>
+      {extra}
+        </div>
         )}
       </div>
     </div>

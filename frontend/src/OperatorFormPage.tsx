@@ -4,6 +4,7 @@ import {
   Settings, Wrench, type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { accountApi } from './api/account'
 import { authApi } from './api/auth'
@@ -162,7 +163,7 @@ export function OperatorFormPage() {
   const showFlourish = useFlourishVisible(themeSlug)
 
   return (
-    <div className="relative min-h-svh overflow-hidden bg-[var(--fl-ground)] p-4">
+    <div className="relative min-h-svh overflow-clip bg-[var(--fl-ground)] p-4 pb-24 sm:pb-4">
       {/* Operators are exactly who this whole feature was described as
           being for ("I want them to be like this is cool to use") - this
           page just never actually got the flourish ManagerShell's had all
@@ -229,7 +230,8 @@ export function OperatorFormPage() {
           >
             <ChecksBanner onJump={jumpToCheck} enabled={showMyChecks} />
 
-            <div className={fl.tabStrip}>
+            {/* Desktop/tablet: the tab strip inside the card, as before. */}
+            <div className={`${fl.tabStrip} hidden sm:flex`}>
               {tabs.map((t) => (
                 <button key={t.key} data-tour={`tab-${t.key}`} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 ${tab === t.key ? fl.tabActive : fl.tabInactive}`}>
                   <t.icon size={14} className="shrink-0" strokeWidth={2.25} /> {t.label}
@@ -241,6 +243,39 @@ export function OperatorFormPage() {
                 </button>
               ))}
             </div>
+
+            {/* Phones: pinned to the bottom of the screen where the thumb
+                already is, all four always visible - the in-card strip was
+                mid-page and scrolled sideways, hiding the last tab. */}
+            {createPortal(<nav
+              className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[var(--fl-border)] bg-[var(--fl-surface)]/95 backdrop-blur sm:hidden"
+              style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+            >
+              {tabs.map((t) => {
+                const active = tab === t.key
+                return (
+                  <button
+                    key={t.key}
+                    data-tour={`tab-${t.key}`}
+                    onClick={() => setTab(t.key)}
+                    className={`relative flex flex-col items-center gap-0.5 py-2.5 text-[0.7rem] font-semibold transition-colors ${
+                      active ? 'text-[var(--fl-accent-2)]' : 'text-[var(--fl-muted)]'
+                    }`}
+                  >
+                    {active && <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-[var(--fl-accent)]" />}
+                    <span className="relative">
+                      <t.icon size={20} strokeWidth={active ? 2.5 : 2} />
+                      {t.key === 'audit' && showMyChecks && myOutstanding.length > 0 && (
+                        <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
+                          {myOutstanding.length}
+                        </span>
+                      )}
+                    </span>
+                    {t.label}
+                  </button>
+                )
+              })}
+            </nav>, document.body)}
 
             {/* key={tab} forces a fresh mount per tab so fl-tab-enter's
                 animation replays on every switch, not just the first. */}

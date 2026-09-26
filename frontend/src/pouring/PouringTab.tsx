@@ -346,18 +346,20 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
             checkWeightG={checkWeightG}
             onCheckWeightChange={setCheckWeightG}
             weightSpec={weightSpec}
+            extraFilled={!!notes.trim()}
+            extra={
+              <div>
+                <label className={label}>Notes</label>
+                <textarea
+                  className={textarea}
+                  rows={2}
+                  placeholder="Anything worth writing down about this hour"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                />
+              </div>
+            }
           />
-
-          <div className="mt-3">
-            <label className={label}>Process observations / notes</label>
-            <textarea
-              className={textarea}
-              rows={2}
-              placeholder="e.g. Target fill weight nominal..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
           </Step>
 
           {result && (
@@ -378,7 +380,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
               the button was a scroll away on a phone - and this is the one
               control on the screen that has to be reachable the moment the
               number is in. */}
-          <div className="sticky bottom-0 -mx-1 border-t border-[var(--fl-border)] bg-[var(--fl-ground)]/95 px-1 pb-1 pt-2 backdrop-blur">
+          <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] -mx-1 border-t sm:bottom-0 border-[var(--fl-border)] bg-[var(--fl-ground)]/95 px-1 pb-1 pt-2 backdrop-blur">
           <SubmitBar
             canSubmit={canSubmit}
             blockers={gateBlockers}

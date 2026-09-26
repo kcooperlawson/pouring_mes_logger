@@ -54,9 +54,15 @@ function useTargetRect(selector: string | null, tick: number): { rect: DOMRect |
     const deadline = Date.now() + TIMEOUT_MS
 
     function locate() {
-      const el = document.querySelector(selector as string)
-      const found = el?.getBoundingClientRect()
-      if (found && isVisible(found)) {
+      // The first VISIBLE match - a tab button exists twice on a phone (the
+      // bottom bar and the CSS-hidden desktop strip) and querySelector alone
+      // would keep returning the hidden one.
+      let found: DOMRect | undefined
+      for (const el of Array.from(document.querySelectorAll(selector as string))) {
+        const r = el.getBoundingClientRect()
+        if (isVisible(r)) { found = r; break }
+      }
+      if (found) {
         setRect(found)
         setSettled(true)
         return true

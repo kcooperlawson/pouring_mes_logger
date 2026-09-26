@@ -1,4 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
+import { PieChart } from 'lucide-react'
+import { PageHeader } from '../shell/PageHeader'
 import { scrapIntelApi } from '../api/scrapIntel'
 import { fl } from '../theme'
 import { Drill } from '../drill/DrillContext'
@@ -38,7 +40,7 @@ function Donut({ data }: { data: { reason: string; duration_min: number }[] }) {
               className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: `hsl(${hueFor(d.reason)} 65% 55%)` }}
             />
-            <span className="text-[#CBD5E1]">{d.reason}</span>
+            <span className="text-[var(--fl-body)]">{d.reason}</span>
             <span className={fl.muted}>
               {d.duration_min} min ({((d.duration_min / total) * 100).toFixed(0)}%)
             </span>
@@ -58,8 +60,8 @@ function BarList({ data }: { data: { resin_type: string; bottles_filled: number;
         .sort((a, b) => b.bottles_filled - a.bottles_filled)
         .map((d) => (
           <div key={d.resin_type} className="flex items-center gap-2 text-xs">
-            <span className="w-32 shrink-0 truncate text-[#CBD5E1]"><Drill f={{ resin: d.resin_type }}>{d.resin_type}</Drill></span>
-            <div className="h-4 flex-1 overflow-hidden rounded bg-[#0F172A]">
+            <span className="w-32 shrink-0 truncate text-[var(--fl-body)]"><Drill f={{ resin: d.resin_type }}>{d.resin_type}</Drill></span>
+            <div className="h-4 flex-1 overflow-hidden rounded bg-black/30">
               <div
                 className="h-full rounded"
                 style={{ width: `${(d.bottles_filled / max) * 100}%`, backgroundColor: d.color }}
@@ -80,21 +82,21 @@ export function ScrapIntelPage() {
   const data = query.data
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>📊 Quality Ops Canvas — Scrap Reject &amp; FPY Engine</h1>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <PageHeader icon={PieChart} title="Scrap & Yield Intelligence" subtitle="What was thrown away, and where it came from." />
 
       {data && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.empty_scrap} units</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.empty_scrap} units</p>
             <p className={`text-xs ${fl.muted}`}>Empty Bottles Scrapped</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.filled_scrap} units</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.filled_scrap} units</p>
             <p className={`text-xs ${fl.muted}`}>Filled Bottles Scrapped</p>
           </div>
           <div className={tile}>
-            <p className="text-lg font-semibold text-white">{data.totals.total_scrap} units</p>
+            <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.total_scrap} units</p>
             <p className={`text-xs ${fl.muted}`}>Total Scrap Volume</p>
           </div>
           <div className={tile}>
@@ -106,7 +108,7 @@ export function ScrapIntelPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className={card}>
-          <p className="mb-2 text-sm font-semibold text-white">Output by Formulation</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">Output by Formulation</p>
           {!data || data.by_resin.length === 0 ? (
             <p className={`py-6 text-center text-sm ${fl.muted}`}>
               🧪 No production logged in this window. Output by formulation appears here once operators start
@@ -118,7 +120,7 @@ export function ScrapIntelPage() {
         </div>
 
         <div className={card}>
-          <p className="mb-2 text-sm font-semibold text-white">Downtime Reasons</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">Downtime Reasons</p>
           {!data || data.downtime_by_reason.length === 0 ? (
             <p className={`py-6 text-center text-sm ${fl.muted}`}>
               ⏱️ No downtime recorded. Every stoppage an operator logs is broken down here by reason.

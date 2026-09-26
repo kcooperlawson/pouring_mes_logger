@@ -5,6 +5,8 @@ import { referenceApi } from '../api/reference'
 import { useToast } from '../toast/ToastProvider'
 import { ScreenSweep } from '../tv/PrintBuild'
 import { motionOff } from '../shell/motion'
+import { Step } from '../pouring/StepCard'
+import { Camera, ClipboardCheck, Lock, MapPin, Unlock as UnlockIcon } from 'lucide-react'
 import { fl } from '../theme'
 
 const input = `${fl.input} py-3 text-base font-normal text-[var(--fl-ink)]`
@@ -122,16 +124,23 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
   })
 
   if (role !== 'operator' && role !== 'packer') return <>{children}</>
+
+  const stationPicker = (
+    <select className={input} value={station} onChange={(e) => onStationChange(e.target.value)}>
+      {!station && <option value="">— choose —</option>}
+      {(pumpsQuery.data ?? []).map((p) => (
+        <option key={p} value={p}>{p}</option>
+      ))}
+    </select>
+  )
+
   if (!effectiveStation && !isPacker) {
     return (
-      <div className={panel}>
-        <label className={`mb-1 block ${fl.label}`}>Which pump station are you starting at?</label>
-        <select className={input} value={station} onChange={(e) => onStationChange(e.target.value)}>
-          <option value="">— choose —</option>
-          {(pumpsQuery.data ?? []).map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-3">
+        <Intro shift={shift} />
+        <Step n={1} title="Which pump are you starting at?">
+          {stationPicker}
+        </Step>
       </div>
     )
   }
@@ -145,8 +154,8 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
             plain mount, so nobody sees a fade-in replay on every reload. */}
         <div style={showUnlock ? { animation: 'fl-fade-up 420ms cubic-bezier(0.22,0.61,0.36,1) both' } : undefined}>
           <div className="mb-2 flex justify-end">
-            <button className={fl.btnSecondary} onClick={() => { setShowUnlock(false); setReopened(true) }}>
-              📋 Startup checklist
+            <button className={`${fl.btnSecondary} flex items-center gap-1.5`} onClick={() => { setShowUnlock(false); setReopened(true) }}>
+              <ClipboardCheck size={14} /> Startup checklist
             </button>
           </div>
           {children}
@@ -156,55 +165,130 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
   }
 
   const cleanlinessDone = statusQuery.data.cleanliness_done_today
+  const verifyReady = qrChecked && materialsChecked && cleanlinessDone
+  // Numbered the way the operator actually meets them: a packer has no pump
+  // to pick, so their first card is the photo.
+  const n0 = isPacker ? 0 : 1
+  const check = (on: boolean) =>
+    `flex items-start gap-2.5 rounded-lg border p-2.5 text-sm transition-colors ${
+      on ? 'border-emerald-700/60 bg-emerald-950/30 text-emerald-200' : 'border-[var(--fl-border)] text-[var(--fl-body)]'
+    }`
 
   return (
     <div className="flex flex-col gap-3">
       {reopened ? (
         <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--fl-border)] bg-[var(--fl-surface)] p-3 text-sm">
           <p className="text-[var(--fl-body)]">
-            📋 Startup checklist for <strong className="text-white">{effectiveStation}</strong> — already done this
-            shift. Open it for the pump startup form, or to redo it after moving to another pump.
+            Startup checklist for <strong className="text-[var(--fl-ink)]">{effectiveStation}</strong> is already done
+            this shift. Open it for the pump startup form, or to redo it after moving to another pump.
           </p>
-          <button className={fl.btnSecondary} onClick={() => setReopened(false)}>← Back to the form</button>
+          <button className={fl.btnSecondary} onClick={() => setReopened(false)}>← Back</button>
         </div>
       ) : (
-        <div className="rounded-lg border border-red-800 bg-red-950 p-3 text-sm text-red-300">
-          <p className="font-semibold">🛑 TERMINAL LOCKED: PRE-SHIFT VALIDATION REQUIRED</p>
-          <p>
-            Complete the startup checklist for <strong>{effectiveStation}</strong> on{' '}
-            <strong>{shift}</strong> before the production modules unlock.
-          </p>
-        </div>
+        <Intro shift={shift} station={effectiveStation} steps={n0 + 2} />
       )}
 
       {!isPacker && (
-        <div>
-          <label className={`mb-1 block ${fl.label}`}>📍 Which pump station are you starting at?</label>
-          <select className={input} value={station} onChange={(e) => onStationChange(e.target.value)}>
-            {(pumpsQuery.data ?? []).map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </div>
+        <Step n={1} title="Your pump" done={!!station}>
+          {stationPicker}
+          {vesselQuery.data && !vesselQuery.data.has_vessel && vesselQuery.data.options.length > 0 && (
+            <div className="mt-3">
+              <label className={`mb-1 flex items-center gap-1.5 ${fl.label}`}><MapPin size={12} /> Which vessel does this pump draw from?</label>
+              <select className={input} value={vesselPick} onChange={(e) => setVesselPick(e.target.value)}>
+                <option value="">— I don't know —</option>
+                {vesselQuery.data.options.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </Step>
       )}
 
-      {!isPacker && vesselQuery.data && !vesselQuery.data.has_vessel && vesselQuery.data.options.length > 0 && (
-        <div>
-          <label className={`mb-1 block ${fl.label}`}>🛢️ Which vessel does this pump draw from?</label>
-          <select className={input} value={vesselPick} onChange={(e) => setVesselPick(e.target.value)}>
-            <option value="">— I don't know —</option>
-            {vesselQuery.data.options.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </div>
-      )}
+      <Step n={n0 + 1} tourId="checklist-step-1" title="Start-of-shift photo" done={cleanlinessDone && !reopened}
+            hint={cleanlinessDone ? undefined : 'photo, or tick clean'}>
+        {cleanlinessDone && !reopened ? (
+          <p className="text-sm text-emerald-400">Logged for today.</p>
+        ) : (
+          <>
+            {cleanlinessDone && (
+              <p className="mb-2 text-xs text-emerald-400">
+                Already logged today - the same photo the Audit tab tracks. Logging it again makes a separate entry,
+                e.g. for a second operator taking over this pump.
+              </p>
+            )}
+            <label className={check(skipPhoto)}>
+              <input
+                type="checkbox" className="mt-0.5"
+                checked={skipPhoto}
+                onChange={(e) => { setSkipPhoto(e.target.checked); if (e.target.checked) setPhoto(null) }}
+              />
+              Station is clean - skip the photo
+            </label>
+            {!skipPhoto && (
+              <label className="mt-2 flex cursor-pointer items-center gap-2 rounded-lg border border-dashed border-[var(--fl-border)] p-3 text-sm text-[var(--fl-body)] hover:border-[var(--fl-accent)]">
+                <Camera size={18} className="shrink-0 text-[var(--fl-accent-2)]" />
+                <span className="min-w-0 truncate">{photo ? photo.name : 'Take or choose a photo of the station'}</span>
+                <input
+                  className="hidden" type="file" accept="image/*"
+                  onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+                />
+              </label>
+            )}
+            <textarea
+              className={`${input} mt-2`}
+              rows={2}
+              placeholder="Notes (optional) - e.g. station clean, ready for shift."
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+            />
+            <button
+              className={`${btn} mt-2`}
+              disabled={(!skipPhoto && !photo) || cleanlinessMutation.isPending}
+              onClick={() => cleanlinessMutation.mutate()}
+            >
+              {cleanlinessMutation.isPending ? 'Saving…' : 'Save photo check'}
+            </button>
+          </>
+        )}
+      </Step>
 
+      <Step n={n0 + 2} tourId="checklist-step-2" title="Final check"
+            hint={cleanlinessDone ? undefined : 'after the photo'}>
+        <div className="flex flex-col gap-2">
+          <label className={check(qrChecked)}>
+            <input type="checkbox" className="mt-0.5" checked={qrChecked} onChange={(e) => setQrChecked(e.target.checked)} />
+            I scanned the daily station QR code and submitted the external checksheet.
+          </label>
+          <label className={check(materialsChecked)}>
+            <input type="checkbox" className="mt-0.5" checked={materialsChecked} onChange={(e) => setMaterialsChecked(e.target.checked)} />
+            {isPacker
+              ? 'Labels, boxes and materials are staged for my pack-out run.'
+              : 'Bins of empty cartridges and carts for filled bottles are staged for my run.'}
+          </label>
+        </div>
+        <button
+          className={`${btn} mt-3 flex items-center justify-center gap-2`}
+          disabled={!verifyReady || submitMutation.isPending}
+          onClick={() => submitMutation.mutate()}
+        >
+          <span className="inline-block" style={verifyReady && !motionOff()
+            ? { animation: 'fl-unlock 700ms cubic-bezier(0.22,0.61,0.36,1) both' } : undefined}>
+            {verifyReady ? <UnlockIcon size={16} /> : <Lock size={16} />}
+          </span>
+          Start my shift
+        </button>
+        {submitMutation.isError && (
+          <p className="mt-2 text-sm text-red-400">{(submitMutation.error as Error).message}</p>
+        )}
+      </Step>
+
+      {/* Out of the main path on purpose - it's the exception, not a step. */}
       <details className="text-sm">
-        <summary className={`cursor-pointer ${fl.muted}`}>
-          🕒 Temporary: this pump was already checked today
+        <summary className={`cursor-pointer ${fl.muted} hover:text-[var(--fl-ink)]`}>
+          Someone already did this pump's checklist today?
         </summary>
-        <div className="mt-2 flex flex-col gap-2">
+        <div className={`${panel} mt-2 flex flex-col gap-2`}>
           {/* A pick from the roster, not free text - "Maria", "maria g." and a
               nickname are three different people in the audit record. "Someone
               else" still allows a name the roster doesn't have yet. */}
@@ -231,89 +315,32 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
             />
           )}
           <button
-            className={btn}
+            className={fl.btnSecondary}
             disabled={!alreadyWho.trim() || overrideMutation.isPending}
             onClick={() => overrideMutation.mutate()}
           >
-            ✅ Mark already done & unlock this terminal
+            Mark already done &amp; unlock
           </button>
         </div>
       </details>
+    </div>
+  )
+}
 
-      <h3 className="text-sm font-semibold text-[var(--fl-ink)]">📋 Daily Startup Checklist</h3>
-
-      {!cleanlinessDone || reopened ? (
-        <div data-tour="checklist-step-1" className={panel}>
-          <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 1: Start-of-shift photo</p>
-          {cleanlinessDone && (
-            <p className="mb-2 text-xs text-emerald-400">
-              ✅ Already logged today — this is the same Start-of-shift photo the Audit tab tracks, so there is
-              nothing left to do for it there. Logging it again here makes a separate entry, e.g. for a second
-              operator taking over this pump.
-            </p>
-          )}
-          <textarea
-            className={input}
-            rows={2}
-            placeholder="Station clean, ready for shift."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <label className="mt-2 flex items-center gap-2 text-sm text-[var(--fl-body)]">
-            <input
-              type="checkbox"
-              checked={skipPhoto}
-              onChange={(e) => { setSkipPhoto(e.target.checked); if (e.target.checked) setPhoto(null) }}
-            />
-            ✅ Station is clean — skip the photo
-          </label>
-          {!skipPhoto && (
-            <input
-              className="mt-2 block text-sm text-[var(--fl-body)]"
-              type="file"
-              accept="image/*"
-              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-            />
-          )}
-          <button
-            className={`${btn} mt-2`}
-            disabled={(!skipPhoto && !photo) || cleanlinessMutation.isPending}
-            onClick={() => cleanlinessMutation.mutate()}
-          >
-            💾 Submit Cleanliness Report
-          </button>
-        </div>
-      ) : (
-        <p className="text-sm text-emerald-400">
-          ✅ Step 1: Start-of-shift photo — logged
-        </p>
-      )}
-
-      <div data-tour="checklist-step-2" className={panel}>
-        <p className="mb-2 text-sm font-medium text-[var(--fl-ink)]">Step 2: Final Verification</p>
-        <label className={`mb-2 flex items-center gap-2 text-sm transition-colors ${qrChecked ? 'text-emerald-300' : 'text-[var(--fl-body)]'}`}>
-          <input type="checkbox" checked={qrChecked} onChange={(e) => setQrChecked(e.target.checked)} />
-          I have scanned the daily station QR code and submitted the external checksheet.
-        </label>
-        <label className={`mb-2 flex items-center gap-2 text-sm transition-colors ${materialsChecked ? 'text-emerald-300' : 'text-[var(--fl-body)]'}`}>
-          <input type="checkbox" checked={materialsChecked} onChange={(e) => setMaterialsChecked(e.target.checked)} />
-          {isPacker
-            ? 'I have verified all labels, boxes, and necessary materials are staged for my pack-out run.'
-            : 'I have verified all bins of empty cartridges and receiving carts for filled bottles are staged for my run.'}
-        </label>
-        <button
-          className={btn}
-          disabled={!qrChecked || !materialsChecked || !cleanlinessDone || submitMutation.isPending}
-          onClick={() => submitMutation.mutate()}
-        >
-          <span className="inline-block" style={qrChecked && materialsChecked && cleanlinessDone && !motionOff()
-            ? { animation: 'fl-unlock 700ms cubic-bezier(0.22,0.61,0.36,1) both' } : undefined}>🔓</span>
-          {' '}Submit Validation &amp; Unlock Terminal
-        </button>
-        {submitMutation.isError && (
-          <p className="mt-2 text-sm text-red-400">{(submitMutation.error as Error).message}</p>
-        )}
-      </div>
+// The header over the checklist. It used to be a red "TERMINAL LOCKED" block,
+// which read as an error on the first screen of every shift - this is the
+// same requirement stated as what it is: a few steps before starting.
+function Intro({ shift, station, steps = 3 }: { shift: string; station?: string; steps?: number }) {
+  return (
+    <div className="rounded-lg border border-[var(--fl-accent)]/40 bg-[var(--fl-accent-wash)] p-3">
+      <p className="flex items-center gap-1.5 text-sm font-bold text-[var(--fl-ink)]">
+        <ClipboardCheck size={16} className="shrink-0 text-[var(--fl-accent-2)]" />
+        {steps} quick steps before you start
+      </p>
+      <p className={`mt-0.5 text-xs ${fl.muted}`}>
+        Startup checklist{station ? <> for <b className="text-[var(--fl-body)]">{station}</b></> : null} · {shift}.
+        The rest of the app opens when it's done.
+      </p>
     </div>
   )
 }

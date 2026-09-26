@@ -17,13 +17,13 @@ function WipPanel() {
 
   return (
     <details className={card}>
-      <summary className="cursor-pointer text-sm font-medium text-white">🧹 System Utility: Clear Unpacked Floor WIP</summary>
-      <p className="mt-2 text-sm text-[#CBD5E1]">
-        Current Today's Floor WIP: <b className="text-white">{wip.toLocaleString()} units</b>
+      <summary className="cursor-pointer text-sm font-medium text-[var(--fl-ink)]">System Utility: Clear Unpacked Floor WIP</summary>
+      <p className="mt-2 text-sm text-[var(--fl-body)]">
+        Current Today's Floor WIP: <b className="text-[var(--fl-ink)]">{wip.toLocaleString()} units</b>
       </p>
       {wip > 0 ? (
         <button className={`${fl.btn} mt-2`} disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-          ⚖️ Auto-Pack Remaining WIP to Zero
+          Auto-Pack Remaining WIP to Zero
         </button>
       ) : (
         <p className="mt-2 text-sm text-emerald-400">Floor WIP is already balanced at 0.</p>
@@ -55,14 +55,14 @@ function BackupPanel() {
   const armed = confirmText.trim() === 'RESTORE' && !!selected
 
   const banner = !status ? null : status.state === 'ok'
-    ? <p className="text-sm text-emerald-400">🟢 Automatic backup is running. {status.message}</p>
+    ? <p className="text-sm text-emerald-400"><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-emerald-400 align-middle" />Automatic backup is running. {status.message}</p>
     : status.state === 'stale'
-      ? <p className="text-sm text-amber-400">🟠 {status.message} Take one now, and check there is disk space and that pg_dump is still on this machine.</p>
-      : <p className="text-sm text-red-400">🔴 {status.message} Take one now.</p>
+      ? <p className="text-sm text-amber-400"><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-400 align-middle" />{status.message} Take one now, and check there is disk space and that pg_dump is still on this machine.</p>
+      : <p className="text-sm text-red-400"><span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-red-400 align-middle" />{status.message} Take one now.</p>
 
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-sm font-semibold text-white">🛡️ Database Disaster Recovery</p>
+      <p className="text-sm font-semibold text-[var(--fl-ink)]">Database Disaster Recovery</p>
       {banner}
       {status && (
         <p className={`text-xs ${fl.muted}`}>
@@ -73,18 +73,18 @@ function BackupPanel() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className={card}>
-          <p className="mb-2 text-sm font-semibold text-white">📦 Generate Database Backup</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">Generate Database Backup</p>
           <button className={fl.btn} disabled={createMutation.isPending} onClick={() => createMutation.mutate()}>
-            📦 Generate Database Backup
+            Generate Database Backup
           </button>
           {createMutation.isSuccess && <p className="mt-1 text-xs text-emerald-400">Backup created: {createMutation.data.filename}</p>}
           {createMutation.isError && <p className="mt-1 text-xs text-red-400">{(createMutation.error as Error).message}</p>}
         </div>
 
         <div className={card}>
-          <p className="mb-2 text-sm font-semibold text-white">🔄 Restore Database</p>
+          <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">Restore Database</p>
           <p className={`mb-2 text-xs ${fl.muted}`}>
-            ⚠️ Overwrites the live database with an old snapshot. Nothing entered since that backup survives.
+            Overwrites the live database with an old snapshot. Nothing entered since that backup survives.
           </p>
           <select className={`${select} mb-2`} value={selected} onChange={(e) => setSelected(e.target.value)}>
             <option value="">— choose a backup —</option>
@@ -95,7 +95,7 @@ function BackupPanel() {
             onChange={(e) => setConfirmText(e.target.value)}
           />
           <button className={fl.btnDanger} disabled={!armed || restoreMutation.isPending} onClick={() => restoreMutation.mutate()}>
-            🔄 Restore Database
+            Restore Database
           </button>
           {restoreMutation.isSuccess && <p className="mt-1 text-xs text-emerald-400">Restored from {selected}!</p>}
           {restoreMutation.isError && <p className="mt-1 text-xs text-red-400">{(restoreMutation.error as Error).message}</p>}

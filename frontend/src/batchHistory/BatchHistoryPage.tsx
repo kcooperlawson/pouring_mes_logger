@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Hourglass } from 'lucide-react'
+import { PageHeader } from '../shell/PageHeader'
 import { FlaskConical } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import {
@@ -35,7 +37,7 @@ function ChartTooltip({ active, payload, label, suffix = ' h' }: {
   if (!active || !payload?.length) return null
   return (
     <div className="rounded border border-[var(--fl-border)] bg-[var(--fl-surface)] px-2.5 py-1.5 text-xs shadow-lg">
-      <p className="font-semibold text-white">{label}</p>
+      <p className="font-semibold text-[var(--fl-ink)]">{label}</p>
       <p style={{ color: payload[0].color }}>{payload[0].value}{suffix}</p>
     </div>
   )
@@ -116,7 +118,7 @@ function QcEntryForm({ batches, days }: { batches: BatchRow[]; days: number }) {
 
   return (
     <div className={card}>
-      <p className="mb-2 text-sm font-semibold text-white">💾 Record QC</p>
+      <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">💾 Record QC</p>
       <select className={`${input} mb-3`} value={batchId ?? ''} onChange={(e) => setBatchId(Number(e.target.value))}>
         {sorted.map((b) => (
           <option key={b.id} value={b.id}>{label(b)}</option>
@@ -184,8 +186,8 @@ export function BatchHistoryPage() {
   const data = query.data
 
   return (
-    <div className="flex flex-col gap-4">
-      <h1 className={fl.heading}>🧪 Batch History — reactor dwell and QC turnaround</h1>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+      <PageHeader icon={Hourglass} title="Batch History & QC Turnaround" subtitle="How long resin sat in a vessel, and how long QC took." />
 
       <select
         className={`${fl.select} w-56`}
@@ -211,19 +213,19 @@ export function BatchHistoryPage() {
         <>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div className={tile} style={{ borderColor: C_DWELL }}>
-              <p className="text-lg font-semibold text-white">{data.totals.fillings_in_window.toLocaleString()}</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.fillings_in_window.toLocaleString()}</p>
               <p className={`text-xs ${fl.muted}`}>Fillings in window</p>
             </div>
             <div className={tile} style={{ borderColor: C_DWELL }}>
-              <p className="text-lg font-semibold text-white">{data.totals.sitting_now.toLocaleString()}</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.sitting_now.toLocaleString()}</p>
               <p className={`text-xs ${fl.muted}`}>Sitting in a vessel now</p>
             </div>
             <div className={tile} style={{ borderColor: C_QC }}>
-              <p className="text-lg font-semibold text-white">{data.totals.waiting_qc.toLocaleString()}</p>
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">{data.totals.waiting_qc.toLocaleString()}</p>
               <p className={`text-xs ${fl.muted}`}>Waiting on QC</p>
             </div>
             <div className={tile} style={{ borderColor: C_QC }}>
-              <p className="text-lg font-semibold text-white">
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">
                 {data.totals.avg_qc_turnaround_h !== null ? `${data.totals.avg_qc_turnaround_h} h` : '—'}
               </p>
               <p className={`text-xs ${fl.muted}`}>Avg QC turnaround</p>
@@ -231,19 +233,19 @@ export function BatchHistoryPage() {
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className={tile}>
-              <p className="text-lg font-semibold text-white">
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">
                 {data.totals.avg_time_in_vessel_h !== null ? `${data.totals.avg_time_in_vessel_h} h` : '—'}
               </p>
               <p className={`text-xs ${fl.muted}`}>Avg time in a vessel</p>
             </div>
             <div className={tile}>
-              <p className="text-lg font-semibold text-white">
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">
                 {data.totals.longest_sitting_h !== null ? `${data.totals.longest_sitting_h} h` : '—'}
               </p>
               <p className={`text-xs ${fl.muted}`}>Longest still sitting</p>
             </div>
             <div className={tile} style={{ borderColor: C_QC }}>
-              <p className="text-lg font-semibold text-white">
+              <p className="text-lg font-semibold text-[var(--fl-ink)]">
                 {data.totals.longest_qc_wait_h !== null ? `${data.totals.longest_qc_wait_h} h` : '—'}
               </p>
               <p className={`text-xs ${fl.muted}`}>Longest wait on QC</p>
@@ -252,7 +254,7 @@ export function BatchHistoryPage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className={card}>
-              <p className="mb-2 text-sm font-semibold text-white">⏱️ Average dwell by vessel</p>
+              <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">⏱️ Average dwell by vessel</p>
               {data.dwell_by_vessel.length === 0 ? (
                 <p className={`text-sm ${fl.muted}`}>No emptied fillings in this window yet.</p>
               ) : (
@@ -272,7 +274,7 @@ export function BatchHistoryPage() {
             </div>
 
             <div className={card}>
-              <p className="mb-2 text-sm font-semibold text-white">🧪 QC turnaround trend</p>
+              <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">🧪 QC turnaround trend</p>
               {data.qc_trend.length === 0 ? (
                 <p className={`text-sm ${fl.muted}`}>No completed QC round trips in this window yet.</p>
               ) : (
@@ -301,13 +303,13 @@ export function BatchHistoryPage() {
 
           {data.out_at_qc.length > 0 && (
             <div className={card}>
-              <p className="mb-2 text-sm font-semibold text-white">🧪 Out at QC now</p>
+              <p className="mb-2 text-sm font-semibold text-[var(--fl-ink)]">🧪 Out at QC now</p>
               <div className="flex flex-col gap-2">
                 {data.out_at_qc.map((o) => {
                   const tone = o.hours_at_qc > 48 ? C_BAD : o.hours_at_qc > 24 ? C_WARN : C_QC
                   return (
                     <div key={o.id} className="flex items-center justify-between rounded-lg px-3 py-2 text-sm" style={{ borderLeft: `4px solid ${tone}` }}>
-                      <span className="text-[#F8FAFC]"><b><Drill f={{ reactor: o.reactor_name }}>{o.reactor_name}</Drill></b> <span className={fl.muted}>· <Drill f={{ resin: o.resin_type }}>{o.resin_type}</Drill></span></span>
+                      <span className="text-[var(--fl-ink)]"><b><Drill f={{ reactor: o.reactor_name }}>{o.reactor_name}</Drill></b> <span className={fl.muted}>· <Drill f={{ resin: o.resin_type }}>{o.resin_type}</Drill></span></span>
                       <span style={{ color: tone }} className="font-bold">{o.hours_at_qc} h at QC</span>
                     </div>
                   )
@@ -326,7 +328,7 @@ export function BatchHistoryPage() {
 
           <div className={card}>
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold text-white">Every filling</p>
+              <p className="text-sm font-semibold text-[var(--fl-ink)]">Every filling</p>
               <button onClick={() => downloadCsv(data.batches)} className={fl.btnSecondary}>
                 ⬇️ Download as CSV
               </button>
