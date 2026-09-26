@@ -139,6 +139,9 @@ export function OperatorFormPage() {
 
   const queryClient = useQueryClient()
   const [touring, setTouring] = useState(false)
+  // While the tour runs it may show what's behind the startup checklist -
+  // see ChecklistGate's preview prop. Always off again when it ends.
+  const [tourPreview, setTourPreview] = useState(false)
   const tourSeenMutation = useMutation({ mutationFn: authApi.tourSeen })
 
   // Auto-launches once for an account that has genuinely never seen it
@@ -155,6 +158,8 @@ export function OperatorFormPage() {
 
   const finishTour = () => {
     setTouring(false)
+    setTourPreview(false)
+    setShowAccount(false)
     if (user && !user.tour_seen) {
       tourSeenMutation.mutate()
       queryClient.setQueryData(['auth', 'me'], { ...user, tour_seen: true })
@@ -236,6 +241,7 @@ export function OperatorFormPage() {
             shift={user?.shift ?? 'Shift 1'}
             station={myStation}
             onStationChange={setMyStation}
+            preview={touring && tourPreview}
           >
             <ChecksBanner onJump={jumpToCheck} enabled={showMyChecks} />
 
@@ -307,7 +313,7 @@ export function OperatorFormPage() {
           <ShiftRecapHost onSignOut={logout} isPacker={isPacker} />
         </DebugOperatorProvider>
       </div>
-      {touring && <TourOverlay steps={operatorTourSteps(isPacker, setTab)} onFinish={finishTour} />}
+      {touring && <TourOverlay steps={operatorTourSteps(isPacker, { setTab, setPreview: setTourPreview, setAccountOpen: setShowAccount })} onFinish={finishTour} />}
     </div>
   )
 }

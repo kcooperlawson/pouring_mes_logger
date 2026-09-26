@@ -363,7 +363,7 @@ export function AccountPanel({ onClose }: { onClose: () => void }) {
       >
         <Compass size={16} className="shrink-0 text-[var(--fl-accent-2)]" /> Take the interactive tour
       </button>
-      <div className="grid grid-cols-4 gap-1 rounded-lg bg-black/20 p-1">
+      <div data-tour="account-tabs" className="grid grid-cols-4 gap-1 rounded-lg bg-black/20 p-1">
         {TABS.map((t) => (
           <button
             key={t.key} onClick={() => setTab(t.key)}

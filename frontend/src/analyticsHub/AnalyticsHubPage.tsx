@@ -291,7 +291,7 @@ export function AnalyticsHubPage() {
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#00D2FF]/20 bg-[#00D2FF]/5 px-5 py-3">
+      <div data-tour="analytics-ticker" className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#00D2FF]/20 bg-[#00D2FF]/5 px-5 py-3">
         <div>
           <p className="text-[0.7rem] font-extrabold uppercase tracking-widest text-[#00D2FF]">Live Daily Expectation (Ticking)</p>
           <p className="text-2xl font-black text-[var(--fl-ink)]">{live_ticker.expected_now_l.toLocaleString()} L</p>
@@ -302,7 +302,7 @@ export function AnalyticsHubPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div data-tour="analytics-kpis" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard
           title="Total Units Poured" value={kpis.total_poured_7d.toLocaleString()}
           trend={{ label: `${pourArrow} ${Math.abs(kpis.pour_delta_pct).toFixed(1)}% vs Prev Week`, tone: pourTone }}

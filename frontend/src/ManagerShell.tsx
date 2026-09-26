@@ -286,7 +286,7 @@ export function ManagerShell() {
             which offers every role the Operator Form/Workstation
             unconditionally. A manager/admin lands there with Debug Mode
             available to test or log on an operator's behalf. */}
-        <button onClick={() => navigate('/operator-form')} className={`${fl.navItem} flex items-center gap-2.5`}>
+        <button data-tour="nav-operator-form" onClick={() => navigate('/operator-form')} className={`${fl.navItem} flex items-center gap-2.5`}>
           <ClipboardEdit size={16} className="shrink-0" strokeWidth={2.25} /> Operator Form
         </button>
       </nav>
@@ -328,7 +328,7 @@ export function ManagerShell() {
             exactly rather than drawing a link that bounces straight back
             for anyone here on a granted ability alone. */}
         {(user?.role === 'manager' || user?.role === 'admin') && (
-          <a href="/tv" target="_blank" rel="noopener noreferrer" className={`${fl.btnSecondary} flex items-center justify-center gap-2 text-center`}>
+          <a data-tour="tv-link" href="/tv" target="_blank" rel="noopener noreferrer" className={`${fl.btnSecondary} flex items-center justify-center gap-2 text-center`}>
             <Tv size={15} /> Launch TV Mode
           </a>
         )}
@@ -459,7 +459,7 @@ export function ManagerShell() {
           </div>
         </main>
       </div>
-      {touring && <TourOverlay steps={managerTourSteps(canAdminister, go)} onFinish={finishTour} />}
+      {touring && <TourOverlay steps={managerTourSteps(canAdminister, go, (key) => canSeeManagerTab(user, key))} onFinish={finishTour} />}
     </div>
   )
 }

@@ -50,16 +50,18 @@ export function ReactorFleetPage() {
         </span>
       </div>
 
-      <ManageFleetPanel />
-      <MarkFilledPanel reactors={fleet} />
-      <BulkPourPanel />
+      <div data-tour="reactor-actions" className="flex flex-col gap-4">
+        <ManageFleetPanel />
+        <MarkFilledPanel reactors={fleet} />
+        <BulkPourPanel />
+      </div>
 
       {fleet.length === 0 ? (
         <p className={`text-sm ${fl.muted}`}>
           No active physical reactors allocated by management. Add them above.
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div data-tour="reactor-fleet" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {fleet.map((r) => {
             const state = level(r.fill_pct, r.is_idle)
             const qc = r.batch?.qc_result || (r.batch?.qc_open ? 'open' : '')

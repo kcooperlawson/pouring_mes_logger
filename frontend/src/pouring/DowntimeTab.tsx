@@ -115,7 +115,7 @@ export function DowntimeTab({ myStation }: { myStation: string }) {
         </div>
       </Step>
 
-      <Step n={2} title="How long, and what fixed it" done={step2Done}>
+      <Step n={2} tourId="downtime-step-2" title="How long, and what fixed it" done={step2Done}>
         <label className={label}>Time it as it happens</label>
         {startedAt === null ? (
           <button

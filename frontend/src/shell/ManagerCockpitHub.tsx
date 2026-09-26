@@ -374,7 +374,7 @@ export function ManagerCockpitHub({
         )}
       </Section>
 
-      <Section title="The floor" icon={Users}>
+      <Section title="The floor" icon={Users} tourId="cockpit-floor">
         {canSee('roster') && (
           <LaunchCard label="Floor Staff Roster" icon={Users} onClick={() => onNavigate('roster')}
                       caption="Who is signed in, on what, right now." />
@@ -385,7 +385,7 @@ export function ManagerCockpitHub({
         )}
       </Section>
 
-      <Section title="Setup — optional" icon={Settings}
+      <Section title="Setup — optional" icon={Settings} tourId="cockpit-setup"
                caption="None of this is needed to log a pour. Set a piece up when you want the answer it gives you.">
         {canSee('assigned-runs') && (
           <LaunchCard

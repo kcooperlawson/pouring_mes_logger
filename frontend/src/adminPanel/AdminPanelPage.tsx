@@ -79,7 +79,7 @@ function StatusStrip() {
   ]
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div data-tour="admin-status" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       {tiles.map((t, i) => (
         <div key={t.label} className={`${fl.card} h-full`}
              style={{ animation: `fl-fade-up 360ms ${stagger(i, 60, 180)}ms cubic-bezier(0.22,0.61,0.36,1) both` }}>
@@ -147,7 +147,7 @@ export function AdminPanelPage() {
       <div className="flex flex-col gap-4 lg:flex-row">
         {/* The rail. On a phone it becomes a plain stack rather than a strip
             that scrolls sideways and hides half the console off screen. */}
-        <nav className="flex shrink-0 flex-col gap-1.5 lg:w-64">
+        <nav data-tour="admin-tabs" className="flex shrink-0 flex-col gap-1.5 lg:w-64">
           {TABS.map((t) => {
             const count = counts[t.key]
             const on = tab === t.key

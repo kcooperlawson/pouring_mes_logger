@@ -6,6 +6,29 @@ Anything before August 31 is written up from the short notes I made at the time.
 
 ---
 
+## 3.30 — Saturday, September 26, 2026
+**The guided tour, properly: it now walks through every screen instead of a handful, for operators, packers and managers alike.**
+
+Installs over 3.29 or anything older.
+
+### Why it only showed a few steps
+
+A brand-new operator's first sign-in has the startup checklist in front of everything, and the tour auto-launches right then. Every step about Pouring, Downtime, Audit and Summary was pointing at a tab that didn't exist yet, so the tour quietly skipped them all - they saw about five steps and none of the screens they'd actually use. The tour can now show what's behind the checklist while it runs. Its dark overlay covers the whole screen the entire time, so nothing back there can be tapped or logged; it's only being shown, and the checklist is exactly where it was the moment the tour ends.
+
+### What it covers now
+
+- **Operators (32 steps, in chapters):** who you are and the written guide; the startup checklist card by card (pump, photo, final check, and the "someone already did it" override); every part of the Pouring tab - the shift ring, "Same as last hour", station and material, the lot check, the count, More details, Submit and Undo; Downtime including the timer; the three photo checks and "I'm ending my shift here"; your Summary; Account & Preferences (opened so you can see what's inside); what happens when the Wi-Fi drops; and the shift recap on sign-out.
+- **Packers:** the same, with the Packing tab's cards in place of Pouring.
+- **Managers (27 steps):** the sidebar; the Cockpit's daily rounds, today's numbers (and that any number opens the logs behind it), and each group of pages; then Live SCADA piece by piece (filters, headline, pouring numbers, shift trajectory, leaderboard, the log), Live Reactors, the Analytics Hub, IT Admin, the Operator Form, TV mode and the handbook. Each chapter opens the page it's about, so what's being described is what's on screen. Pages an account can't see are left out.
+- A step whose screen part isn't showing yet - the lot check card only appears once a pump and resin are picked - is still explained, as a card in the middle of the screen, instead of being dropped.
+
+### The tour itself works better
+
+- **It scrolls to what it's pointing at.** Before, a step about something further down the page spotlighted a spot off the bottom of the screen. The spotlight also follows the page if you scroll.
+- **Back works.** Going back past a step that had been skipped used to bounce straight forward again. Every step also puts its own screen back, so Back into the middle of an earlier section lands on the right tab.
+- **No more dark pauses.** A step that doesn't apply used to leave a blank dark screen for two and a half seconds before moving on; two in a row looked like it had frozen. It now moves on in well under a second unless the page is still loading.
+- Chapter names ("Logging an hour", "Live SCADA") and a progress bar on each card, arrow keys and Enter to move through it, and the card no longer lands on top of what it's describing.
+
 ## 3.29 — Friday, September 25, 2026
 **A redesign day for the screens operators actually use: the startup checklist, a tab bar on phones, a calmer Pouring tab, a Summary that's worth opening, the last manager pages brought in line - and then animations you can actually notice, with a setting to turn them down.**
 

@@ -21,13 +21,17 @@ interface Props {
   station: string
   onStationChange: (s: string) => void
   children: ReactNode
+  /** The guided tour showing what's behind the checklist. Its overlay
+   *  covers the whole screen, so nothing can actually be tapped or logged
+   *  while this is on - the screen is only being shown. */
+  preview?: boolean
 }
 
 // The hard gate, ported from pages/operator_form/checklist.py's
 // render_checklist_gate(): st.stop() there becomes "don't render children"
 // here. Only enforced for operators and packers, exactly like the original
 // ("Only enforced for Operators and Packers, not Managers in Debug mode").
-export function ChecklistGate({ role, shift, station, onStationChange, children }: Props) {
+export function ChecklistGate({ role, shift, station, onStationChange, children, preview = false }: Props) {
   const queryClient = useQueryClient()
   const toast = useToast()
   const isPacker = role === 'packer'
@@ -126,6 +130,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
   })
 
   if (role !== 'operator' && role !== 'packer') return <>{children}</>
+  if (preview && !(statusQuery.data?.checklist_done && !reopened)) return <>{children}</>
 
   const stationPicker = (
     <select className={input} value={station} onChange={(e) => onStationChange(e.target.value)}>
@@ -140,7 +145,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
     return (
       <div className="flex flex-col gap-3">
         <Intro shift={shift} />
-        <Step n={1} title="Which pump are you starting at?">
+        <Step n={1} tourId="checklist-pump" title="Which pump are you starting at?">
           {stationPicker}
         </Step>
       </div>
@@ -157,7 +162,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
             plain mount, so nobody sees a fade-in replay on every reload. */}
         <div className={showUnlock ? 'fl-reveal' : undefined} style={showUnlock ? { animationDelay: '350ms' } : undefined}>
           <div className="mb-2 flex justify-end">
-            <button className={`${fl.btnSecondary} flex items-center gap-1.5`} onClick={() => { setShowUnlock(false); setReopened(true) }}>
+            <button data-tour="reopen-checklist" className={`${fl.btnSecondary} flex items-center gap-1.5`} onClick={() => { setShowUnlock(false); setReopened(true) }}>
               <ClipboardCheck size={14} /> Startup checklist
             </button>
           </div>
@@ -192,7 +197,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
       )}
 
       {!isPacker && (
-        <Step n={1} title="Your pump" done={!!station}>
+        <Step n={1} tourId="checklist-pump" title="Your pump" done={!!station}>
           {stationPicker}
           {vesselQuery.data && !vesselQuery.data.has_vessel && vesselQuery.data.options.length > 0 && (
             <div className="mt-3">
@@ -287,7 +292,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
       </Step>
 
       {/* Out of the main path on purpose - it's the exception, not a step. */}
-      <details className="text-sm">
+      <details data-tour="checklist-already" className="text-sm">
         <summary className={`cursor-pointer ${fl.muted} hover:text-[var(--fl-ink)]`}>
           Someone already did this pump's checklist today?
         </summary>

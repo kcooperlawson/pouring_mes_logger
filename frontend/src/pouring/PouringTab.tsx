@@ -235,6 +235,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
           because that is the one thing nobody should ever be handed. */}
       {lastEntryQuery.data?.found && (
         <button
+          data-tour="same-as-last"
           className={`${fl.btnSecondary} w-full justify-center py-2.5 text-sm sm:w-auto sm:self-start`}
           onClick={() => {
             const last = lastEntryQuery.data
@@ -380,7 +381,7 @@ export function PouringTab({ shift, myStation }: { shift: string; myStation: str
               the button was a scroll away on a phone - and this is the one
               control on the screen that has to be reachable the moment the
               number is in. */}
-          <div className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] -mx-1 border-t sm:bottom-0 border-[var(--fl-border)] bg-[var(--fl-ground)]/95 px-1 pb-1 pt-2 backdrop-blur">
+          <div data-tour="submit-bar" className="sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] -mx-1 border-t sm:bottom-0 border-[var(--fl-border)] bg-[var(--fl-ground)]/95 px-1 pb-1 pt-2 backdrop-blur">
           <SubmitBar
             canSubmit={canSubmit}
             blockers={gateBlockers}

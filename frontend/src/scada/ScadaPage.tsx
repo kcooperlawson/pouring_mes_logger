@@ -142,7 +142,7 @@ export function ScadaPage() {
           </div>
         )}
 
-        <details className={card}>
+        <details data-tour="scada-filters" className={card}>
           <summary className="cursor-pointer text-sm font-medium text-white">🔍 Filters and time horizon</summary>
           <div className="mt-3 flex flex-wrap gap-3">
             <div>
@@ -213,6 +213,7 @@ export function ScadaPage() {
           <>
             <Drill f={base} block className="rounded-xl" title="Every log behind this total">
             <div
+              data-tour="scada-headline"
               className="relative overflow-hidden rounded-xl border border-[var(--fl-border)] bg-[var(--fl-surface)] p-4"
               style={{ borderLeft: `4px solid ${data.headline_is_live ? '#10B981' : 'var(--fl-muted)'}` }}
             >
@@ -254,7 +255,7 @@ export function ScadaPage() {
             {data.pouring && (
               <>
                 <Band title="Pouring" icon={Droplets} />
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div data-tour="scada-pouring" className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   <StatCard icon={Droplets} label="Volume Output" value={<><Odometer value={data.pouring.liters_output} uid="vo" /> L</>}
                             sub={data.pouring.cart_type_counts.map((c) => `${c.units} ${c.cartridge_type}`).join(' · ') || 'No cartridges logged'}
                             flashKey={data.pouring.liters_output} drill={base} index={0} />
@@ -274,7 +275,7 @@ export function ScadaPage() {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                   {data.pouring.trajectory && (
-                    <div className={`${card} sm:col-span-2`}>
+                    <div data-tour="scada-trajectory" className={`${card} sm:col-span-2`}>
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--fl-body)]">
                           <Timer size={14} className="text-[var(--fl-accent-2)]" /> Live shift trajectory
@@ -315,7 +316,7 @@ export function ScadaPage() {
                   {/* Off shift there is no trajectory card beside it, and a
                       third-width panel alone on a row reads as something
                       failed to load. */}
-                  <div className={`${card} ${data.pouring.trajectory ? '' : 'sm:col-span-3'}`}>
+                  <div data-tour="scada-leaderboard" className={`${card} ${data.pouring.trajectory ? '' : 'sm:col-span-3'}`}>
                     <p className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[var(--fl-body)]">
                       🔥 Pouring leaderboard
                     </p>
@@ -383,7 +384,7 @@ export function ScadaPage() {
             )}
 
             <Band title="The log" icon={Layers} />
-            <div className={card}>
+            <div data-tour="scada-log" className={card}>
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <p className="text-sm font-semibold text-[var(--fl-ink)]">{data.log_stream_title}</p>

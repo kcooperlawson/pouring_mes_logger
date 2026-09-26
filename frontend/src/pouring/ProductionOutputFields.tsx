@@ -208,7 +208,7 @@ export function ProductionOutputFields({
         </div>
       )}
 
-      <div className="rounded-lg border border-[var(--fl-border)]">
+      <div data-tour="more-details" className="rounded-lg border border-[var(--fl-border)]">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}

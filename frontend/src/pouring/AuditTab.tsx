@@ -135,6 +135,7 @@ export function AuditTab({
               say so yourself instead of waiting on a guess. */}
           {!myRow?.end_audit_at && !myRow?.end_expected && (
             <button
+              data-tour="end-shift"
               onClick={() => setLogging({ auditType: KIND_TO_AUDIT_TYPE.end, station: myStation })}
               className={`${fl.btnSecondary} justify-center py-2.5 text-sm`}
             >

@@ -87,7 +87,7 @@ export function SummaryTab() {
       ) : (
         <>
           <Drill f={{ date_from: today, date_to: today }} block className="rounded-lg" title="Every log behind today's numbers">
-            <div className={`${fl.card} text-center`} style={{ animation: 'fl-fade-up 360ms both' }}>
+            <div data-tour="summary-hero" className={`${fl.card} text-center`} style={{ animation: 'fl-fade-up 360ms both' }}>
               <p className={fl.label}>Units today</p>
               <p className="text-5xl font-black tabular-nums text-[var(--fl-accent-2)]">{shownUnits.toLocaleString()}</p>
               <p className={`mt-1 text-sm ${fl.muted}`}>
@@ -125,7 +125,7 @@ export function SummaryTab() {
           ) : (
             <>
               <Band title="Hour by hour" icon={Clock} />
-              <div className={fl.card}>
+              <div data-tour="summary-hours" className={fl.card}>
                 <div className="flex h-32 items-end gap-1.5">
                   {hours.map((h, i) => {
                     const isBest = best?.hour === h.hour
@@ -177,7 +177,7 @@ export function SummaryTab() {
 
       {/* Career badges, folded away at the bottom - there for anyone who
           wants to look, not something the screen leads with. */}
-      <details className="mt-1">
+      <details data-tour="summary-badges" className="mt-1">
         <summary className={`flex cursor-pointer items-center gap-1.5 text-xs ${fl.muted}`}>
           <Award size={13} /> Career badges
         </summary>

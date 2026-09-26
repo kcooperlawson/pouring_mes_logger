@@ -140,7 +140,7 @@ export function PackingTab() {
         </div>
       </Step>
 
-      <Step n={2} title="Units packed" done={step2Done}>
+      <Step n={2} tourId="packing-step-2" title="Units packed" done={step2Done}>
         <div>
           <label className={label}>✅ Total Good Units Packed</label>
           <input

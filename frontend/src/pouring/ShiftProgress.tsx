@@ -113,7 +113,7 @@ export function ShiftProgress() {
 
   return (
     <Drill f={{ date_from: today, date_to: today }} block className="rounded-lg" title="Every log you've made today">
-    <div className={`${fl.card} flex items-center gap-3`}>
+    <div data-tour="shift-ring" className={`${fl.card} flex items-center gap-3`}>
       <div
         key={popped}
         {...ringAnchor}
