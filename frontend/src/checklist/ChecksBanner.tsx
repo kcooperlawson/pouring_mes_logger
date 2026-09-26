@@ -14,9 +14,13 @@ export function ChecksBanner({
   if (!enabled || outstanding.length === 0) return null
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 p-3">
-      <p className="flex items-center gap-1.5 text-sm font-semibold text-amber-300">
-        <Camera size={15} className="shrink-0" />
+    // Slides in when a check becomes owed (it mounts right then), and the
+    // camera keeps a slow pulse going until it's dealt with.
+    <div className="fl-success-in flex flex-col gap-2 rounded-lg border border-amber-600 bg-amber-950/40 p-3">
+      <p className="flex items-center gap-2 text-sm font-semibold text-amber-300">
+        <span className="fl-attention flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-500/20">
+          <Camera size={14} />
+        </span>
         {outstanding.length} check{outstanding.length === 1 ? '' : 's'} still needed today
       </p>
       <div className="flex flex-wrap gap-2">

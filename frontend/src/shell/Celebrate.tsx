@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { flourishesDisabled } from './ThemeFlourish'
+import { theatreOff } from './motion'
 
 // The moment a pour actually lands. An operator does this dozens of times a
 // shift, and until now it was a toast and a buzz - correct, and completely
@@ -8,9 +8,8 @@ import { flourishesDisabled } from './ThemeFlourish'
 //
 // Drawn in the current theme's own colours (the --fl-* tokens), so it reads
 // as part of whichever theme they picked rather than a bolted-on party
-// trick. Off entirely under prefers-reduced-motion or the app's own
-// "background animations off" switch - the same two gates every other
-// flourish here respects.
+// trick. Only at the Full animation level (see shell/motion.ts) - Subtle, Off
+// and prefers-reduced-motion all skip it.
 
 const EVENT = 'mes-celebrate'
 
@@ -27,10 +26,6 @@ export interface CelebrationDetail {
 
 export function celebrate(detail: CelebrationDetail = {}) {
   window.dispatchEvent(new CustomEvent(EVENT, { detail }))
-}
-
-function reducedMotion(): boolean {
-  return typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
 interface Piece {
@@ -68,7 +63,7 @@ export function CelebrationLayer() {
 
   useEffect(() => {
     const onCelebrate = (event: Event) => {
-      if (reducedMotion() || flourishesDisabled()) return
+      if (theatreOff()) return
       const detail = (event as CustomEvent<CelebrationDetail>).detail ?? {}
       // An ordinary hour for that pump is a decent burst; a record is the
       // full screen. Floors at a real celebration either way - every logged

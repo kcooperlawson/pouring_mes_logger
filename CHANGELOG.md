@@ -7,7 +7,7 @@ Anything before August 31 is written up from the short notes I made at the time.
 ---
 
 ## 3.29 — Friday, September 25, 2026
-**A redesign day for the screens operators actually use: the startup checklist, a tab bar on phones, a calmer Pouring tab, a Summary that's worth opening, and the last manager pages brought in line.**
+**A redesign day for the screens operators actually use: the startup checklist, a tab bar on phones, a calmer Pouring tab, a Summary that's worth opening, the last manager pages brought in line - and then animations you can actually notice, with a setting to turn them down.**
 
 Same rule as the last redesign: nothing here adds or removes a step. Every field, check and button is still there and still does what it did. Installs over 3.28 or anything older.
 
@@ -24,6 +24,23 @@ Same rule as the last redesign: nothing here adds or removes a step. Every field
 
 - **Scrap & Yield, Batch History, Cleanliness & Photo Audits and Checklist & Audit Status** now open with the same icon header as the Cockpit (one shared `PageHeader` component, so they can't drift apart again) and plainer titles, and sit in the same centred width as the rest.
 - **IT Admin's Database, Plant configuration and Crash reports tabs** lost the emoji in their headings and use the theme's colours instead of hard-coded ones. Backup status uses coloured dots, and the warnings use proper icons.
+
+### Animations you can actually notice
+
+Most of the movement that was already in the app was so quick and small that nobody saw it. On a loud floor people glance at the screen rather than read it, so this pass is mostly about feedback - making it obvious that something happened - and nothing ever waits on an animation.
+
+- **A step finishing** pops its number into a tick that draws itself on, and the card rings green once. Only when it actually changes, never for a card that was already done when you opened the page.
+- **A pour landing:** the "Logged" banner drops in with a big tick, on top of the confetti and the number flying to the ring that were already there.
+- **Tapping Submit before it's ready** used to do nothing at all. It still won't submit, but now the button shakes and the line saying what's missing flashes red, right under your thumb.
+- **Starting your shift:** a padlock springs open in the middle of the screen ("You're all set"), a short burst of confetti, and the tabs rise into place behind it.
+- **Tabs slide in from the side you moved towards**, and the highlight under the phone tab bar glides across instead of jumping.
+- **"More details" and the other folds open smoothly** instead of snapping, and the −10/+10 buttons give the count a little bump so a tap is seen to land.
+- **Something waiting on you** - an outstanding photo check - keeps a slow pulse on the Audit badge and the banner until it's done. The banner slides in the moment a check becomes owed.
+- **Toasts** spring up with a coloured edge (green saved, red problem), a proper icon, and a thin bar that runs down for as long as they'll stay.
+- **Summary** counts up to your numbers when you open it, the tiles arrive one after another, and your best hour catches the light now and then.
+- **Managers:** the Cockpit's today figures count up as it opens and flash when the minute refresh changes one, and the Historical and Analytics line charts draw themselves left to right.
+
+**A new setting for all of it: Account & Preferences → Look → Animations: Full, Subtle or Off.** Full is everything. Subtle keeps the useful movement (ticks, slides, shakes) and drops the confetti and anything that keeps pulsing. Off is no movement at all; everything still works the same, it just changes in place. It's saved to the device, not the account, same as sound - a shared terminal's setting isn't necessarily whoever's signed in. A device set to reduce motion always gets Off. The "Background animation" switch next to it now only does what it says: the moving theme backdrop. If you'd turned that off before, this device starts on Subtle.
 
 ## 3.28 — Wednesday, September 23, 2026
 **Getting ready for second shift: clearer photo checks, a redesign of every screen that still looked old, a guided tour for anyone new, a recap at the end of each shift, QC in the exports, and a packing lot bug fixed.**

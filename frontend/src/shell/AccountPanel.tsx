@@ -7,6 +7,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { PALETTES, paletteByName } from '../palettes'
 import { isMuted, setMuted } from '../sound/chimes'
 import { flourishesDisabled, setFlourishesDisabled } from './ThemeFlourish'
+import { type MotionLevel, motionLevel, setMotionLevel } from './motion'
 import { useToast } from '../toast/ToastProvider'
 import { Changelog } from './Changelog'
 import { requestTour } from '../tour/tourLaunch'
@@ -112,8 +113,51 @@ function ThemePicker() {
         high-contrast one can read better under bright floor lighting or from further away than this
         one does.
       </p>
+      <MotionLevelPicker />
       <FlourishToggle />
       <SoundToggle />
+    </div>
+  )
+}
+
+const MOTION_LEVELS: { key: MotionLevel; label: string; blurb: string }[] = [
+  { key: 'full', label: 'Full', blurb: 'Everything: ticks, slides, count-ups, confetti when a pour lands, and a pulse on anything waiting for you.' },
+  { key: 'subtle', label: 'Subtle', blurb: 'The useful movement only - ticks, slides and shakes - without confetti or anything that keeps pulsing.' },
+  { key: 'off', label: 'Off', blurb: 'No movement at all. Everything still works exactly the same, it just changes in place.' },
+]
+
+// How much the app moves, on this device. Saved here rather than to the
+// account for the same reason as the background switch below: a shared floor
+// terminal's setting isn't necessarily whoever is signed in right now.
+function MotionLevelPicker() {
+  const [level, setLevel] = useState<MotionLevel>(motionLevel)
+  const osReduced = (() => {
+    try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false }
+  })()
+  const current = MOTION_LEVELS.find((m) => m.key === level) ?? MOTION_LEVELS[0]
+  return (
+    <div className="mt-3">
+      <p className="text-sm text-[var(--fl-body)]">Animations</p>
+      <div className="mt-1 grid grid-cols-3 gap-1 rounded-lg border border-[var(--fl-border)] p-1" role="radiogroup" aria-label="Animations">
+        {MOTION_LEVELS.map((m) => (
+          <button
+            key={m.key}
+            type="button"
+            role="radio"
+            aria-checked={level === m.key}
+            onClick={() => { setLevel(m.key); setMotionLevel(m.key) }}
+            className={`rounded-md py-1.5 text-xs font-semibold transition-colors ${
+              level === m.key ? 'bg-[var(--fl-accent)] text-white' : 'text-[var(--fl-muted)] hover:text-[var(--fl-ink)]'
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+      <p className={`mt-1 text-xs ${fl.muted}`}>
+        {osReduced ? "Your device is set to reduce motion, so animations stay off whatever this says. " : ''}
+        {current.blurb} Saved to this device only.
+      </p>
     </div>
   )
 }

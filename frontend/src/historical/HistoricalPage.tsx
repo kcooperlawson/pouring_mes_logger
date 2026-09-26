@@ -34,17 +34,23 @@ function TrendLine({ points }: { points: { date: string; bottles_filled: number 
   const area = `${line} L${coords[coords.length - 1]?.[0] ?? w - pad},${h - pad} L${coords[0]?.[0] ?? pad},${h - pad} Z`
   return (
     <div>
-      <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 180 }}>
+      {/* Keyed by the line itself, so changing the filter redraws it: the
+          line traces left to right, the fill fades up behind it, and each
+          point lands as the line reaches it. */}
+      <svg key={line} viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 180 }}>
         <defs>
           <linearGradient id="fl-hist-spark" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--fl-accent)" stopOpacity="0.4" />
             <stop offset="100%" stopColor="var(--fl-accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <path d={area} fill="url(#fl-hist-spark)" />
-        <path d={line} fill="none" stroke="var(--fl-accent-2)" strokeWidth={2} strokeLinejoin="round" />
+        <path d={area} fill="url(#fl-hist-spark)" style={{ animation: 'fl-rain-fade 700ms 350ms ease-out both' }} />
+        <path d={line} pathLength={1} className="fl-line-draw" fill="none" stroke="var(--fl-accent-2)" strokeWidth={2} strokeLinejoin="round" />
         {coords.map(([x, y], i) => (
-          <circle key={i} cx={x} cy={y} r={3} fill="var(--fl-accent-2)" />
+          <circle
+            key={i} cx={x} cy={y} r={3} fill="var(--fl-accent-2)"
+            style={{ animation: `fl-rain-fade 240ms ${Math.round((i / Math.max(1, coords.length - 1)) * 800)}ms ease-out both` }}
+          />
         ))}
       </svg>
       <div className={`flex justify-between text-xs ${fl.muted}`}>

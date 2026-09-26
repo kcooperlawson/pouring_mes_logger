@@ -1,29 +1,84 @@
+import { useEffect, useRef, useState } from 'react'
 import { flourishesDisabled } from './ThemeFlourish'
 
 // The shared rules for movement in this app, in one place so a new animation
 // can't quietly ignore them.
 //
-// Two gates, the same two every other flourish here respects: the OS-level
-// prefers-reduced-motion, and the app's own "background animations off"
-// switch for somebody who just finds movement distracting. When either is on,
-// every helper below becomes a no-op that still does the useful part - the
-// number still changes, the panel still opens, nothing waits on an animation
-// that isn't going to run.
+// Two gates: the OS-level prefers-reduced-motion, and the app's own
+// Animations setting (Account & Preferences -> Look): Full, Subtle or Off.
+// Off, or reduced-motion, makes every helper below a no-op that still does
+// the useful part - the number still changes, the panel still opens, nothing
+// waits on an animation that isn't going to run. Subtle keeps the feedback
+// (a tick drawing on, a shake, a slide) and drops the theatre (confetti,
+// looping pulses, shimmer).
+//
+// The "Background animation" switch next to it is only the theme's moving
+// backdrop now - it used to double as the only way to calm everything else
+// down too, which is why an old "off" there reads as Subtle below.
 //
 // Nothing here is ever on the critical path of a submit. An animation runs
 // while the request is in flight or after it lands; a pour is never held back
 // a single frame for the sake of a flourish.
 
+export type MotionLevel = 'full' | 'subtle' | 'off'
+
+const LEVEL_KEY = 'mes_motion_level'
+const LEVEL_EVENT = 'mes-motion-level-changed'
+
+function reducedMotion(): boolean {
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  } catch {
+    return false
+  }
+}
+
+/** This device's chosen level, before reduced-motion is applied. */
+export function motionLevel(): MotionLevel {
+  try {
+    const saved = localStorage.getItem(LEVEL_KEY)
+    if (saved === 'full' || saved === 'subtle' || saved === 'off') return saved
+  } catch {
+    /* blocked storage just means the default */
+  }
+  return flourishesDisabled() ? 'subtle' : 'full'
+}
+
+/** The level actually in force: reduced-motion always wins. */
+export function effectiveMotion(): MotionLevel {
+  if (typeof window === 'undefined' || reducedMotion()) return 'off'
+  return motionLevel()
+}
+
+/** Mirrors the level onto <html data-motion> so plain CSS can follow it. */
+export function applyMotionLevel() {
+  if (typeof document !== 'undefined') document.documentElement.dataset.motion = effectiveMotion()
+}
+
+export function setMotionLevel(level: MotionLevel) {
+  try {
+    localStorage.setItem(LEVEL_KEY, level)
+  } catch {
+    /* a private window just means the choice isn't remembered */
+  }
+  applyMotionLevel()
+  window.dispatchEvent(new Event(LEVEL_EVENT))
+}
+
+export function onMotionLevelChange(fn: () => void): () => void {
+  window.addEventListener(LEVEL_EVENT, fn)
+  return () => window.removeEventListener(LEVEL_EVENT, fn)
+}
+
 export const EASE = 'cubic-bezier(0.22, 0.61, 0.36, 1)'
 
 export function motionOff(): boolean {
-  if (typeof window === 'undefined') return true
-  try {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return true
-  } catch {
-    /* a browser with no matchMedia still gets animations */
-  }
-  return flourishesDisabled()
+  return effectiveMotion() === 'off'
+}
+
+/** Confetti, looping pulses, shimmer - Full only. */
+export function theatreOff(): boolean {
+  return effectiveMotion() !== 'full'
 }
 
 /** A stagger delay for the nth item in a list, capped so a long list doesn't
@@ -114,4 +169,36 @@ export function flyToRing(from: Element | null | undefined, text: string): void 
     { duration: 800, easing: EASE, fill: 'forwards' },
   )
   animation.finished.catch(() => {}).finally(() => ghost.remove())
+}
+
+/** A number that counts from its last value to its new one, used by every
+ *  figure that changes in front of somebody. The first render counts up from
+ *  zero only when `fromZero` is set - a page that opens on a big number is
+ *  the one place a count-up reads as "here's your day", not as lag. */
+export function useCountUp(value: number, ms = 650, fromZero = false): number {
+  const [shown, setShown] = useState(fromZero ? 0 : value)
+  const last = useRef(fromZero ? 0 : value)
+  useEffect(() => {
+    const from = last.current
+    last.current = value
+    return countUp(from, value, ms, setShown)
+  }, [value, ms])
+  return shown
+}
+
+/** True for one beat after `on` goes from false to true - never on mount -
+ *  so a card that was already done when the page opened doesn't celebrate. */
+export function useJustBecame(on: boolean, ms = 900): boolean {
+  const prev = useRef(on)
+  const [hot, setHot] = useState(false)
+  useEffect(() => {
+    if (on && !prev.current && !motionOff()) {
+      setHot(true)
+      const t = setTimeout(() => setHot(false), ms)
+      prev.current = on
+      return () => clearTimeout(t)
+    }
+    prev.current = on
+  }, [on, ms])
+  return hot
 }

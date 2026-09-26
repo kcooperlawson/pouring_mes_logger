@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motionOff } from '../shell/motion'
+import { CheckMark } from './StepCard'
 import { fl } from '../theme'
 
 interface UndoState {
@@ -63,13 +64,23 @@ export function SubmitBar({
     return () => clearInterval(id)
   }, [undo])
 
+  // A tap on Submit while something's still missing used to do nothing at
+  // all - the button was disabled, so the tap just vanished. It still can't
+  // submit, but now it shakes and the line saying why flashes, so the answer
+  // to "why won't it go?" is right there under the thumb.
+  const [nudge, setNudge] = useState(0)
+  const blocked = !canSubmit
+
   const undoSecondsLeft = undo ? Math.max(0, Math.round((undo.expiresAt - now) / 1000)) : 0
   const showUndo = undo && undoSecondsLeft > 0
 
   if (locked) {
     return (
-      <div className="rounded-lg border border-emerald-800 bg-emerald-950 px-4 py-4 text-center text-sm font-medium text-emerald-300">
-        ✅ Logged — {lockSecondsLeft}s
+      <div className="fl-success-in flex items-center justify-center gap-2.5 rounded-lg border border-emerald-700 bg-emerald-950 px-4 py-3.5 text-base font-bold text-emerald-300">
+        <span className="fl-pop flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-white">
+          <CheckMark size={18} draw={!motionOff()} />
+        </span>
+        Logged <span className="text-sm font-medium text-emerald-400/80">· {lockSecondsLeft}s</span>
       </div>
     )
   }
@@ -77,9 +88,9 @@ export function SubmitBar({
   return (
     <div className="flex flex-col gap-2">
       {showUndo && (
-        <div className={`flex items-center justify-between gap-2 text-sm text-[#CBD5E1] ${fl.card}`}>
+        <div className={`fl-rise flex items-center justify-between gap-2 text-sm text-[var(--fl-body)] ${fl.card}`}>
           <span>
-            Last entry: <strong className="text-white">{undo.units.toLocaleString()} units</strong> ({undoSecondsLeft}s left to undo)
+            Last entry: <strong className="text-[var(--fl-ink)]">{undo.units.toLocaleString()} units</strong> ({undoSecondsLeft}s left to undo)
           </span>
           <button onClick={onUndo} disabled={isUndoing} className={`${fl.btnSecondary} flex items-center gap-1.5`}>
             <UndoRing secondsLeft={undoSecondsLeft} /> Undo last
@@ -88,7 +99,7 @@ export function SubmitBar({
       )}
 
       {blockers.length > 0 && (
-        <p className={`text-xs ${fl.muted}`}>
+        <p key={`why-${nudge}`} className={`text-xs ${fl.muted} ${nudge ? 'fl-flash-red' : ''}`}>
           Before you can submit: {blockers.join('; ')}.
         </p>
       )}
@@ -99,7 +110,13 @@ export function SubmitBar({
           a progress-shaped animation, not a real percentage: nothing here
           knows how far along the server is, and pretending to would be a
           lie that stalls at 90%. */}
-      <button className={`${btn} relative overflow-hidden`} disabled={!canSubmit || isSubmitting} onClick={onSubmit}>
+      <button
+        key={`submit-${nudge}`}
+        className={`${btn} relative overflow-hidden ${blocked ? 'opacity-40' : ''} ${nudge ? 'fl-shake' : ''}`}
+        disabled={isSubmitting}
+        aria-disabled={blocked}
+        onClick={() => (blocked ? setNudge((k) => k + 1) : onSubmit())}
+      >
         {isSubmitting && !motionOff() && (
           <span
             aria-hidden="true"

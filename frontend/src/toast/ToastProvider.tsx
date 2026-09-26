@@ -1,3 +1,4 @@
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { createContext, type ReactNode, useCallback, useContext, useRef, useState } from 'react'
 
 type ToastKind = 'success' | 'error'
@@ -42,21 +43,36 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ show }}>
       {children}
       <div className="pointer-events-none fixed inset-x-0 bottom-20 z-[200] sm:bottom-4 flex flex-col items-center gap-2 px-4">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`pointer-events-auto w-full max-w-sm rounded-lg border px-4 py-2.5 text-sm font-semibold shadow-[var(--fl-shadow-hover)] ${
-              t.kind === 'success'
-                ? 'border-[var(--fl-accent)] bg-[var(--fl-surface)] text-[var(--fl-ink)]'
-                : 'border-red-700 bg-red-950 text-red-200'
-            }`}
-            style={{
-              animation: `${t.leaving ? 'fl-toast-out' : 'fl-toast-in'} ${EXIT_MS}ms cubic-bezier(0.22,0.61,0.36,1) both`,
-            }}
-          >
-            {t.kind === 'success' ? '✅ ' : '⚠️ '}{t.message}
-          </div>
-        ))}
+        {toasts.map((t) => {
+          const ok = t.kind === 'success'
+          const Icon = ok ? CheckCircle2 : AlertTriangle
+          return (
+            <div
+              key={t.id}
+              role={ok ? 'status' : 'alert'}
+              className={`pointer-events-auto relative flex w-full max-w-sm items-center gap-2.5 overflow-hidden rounded-lg border border-l-4 py-2.5 pl-3 pr-4 text-sm font-semibold shadow-[var(--fl-shadow-hover)] ${
+                ok
+                  ? 'border-[var(--fl-border)] border-l-emerald-500 bg-[var(--fl-surface)] text-[var(--fl-ink)]'
+                  : 'border-red-800 border-l-red-500 bg-red-950 text-red-200'
+              }`}
+              style={{
+                animation: t.leaving
+                  ? `fl-toast-out ${EXIT_MS}ms cubic-bezier(0.22,0.61,0.36,1) both`
+                  : 'fl-toast-spring 460ms cubic-bezier(0.22,0.61,0.36,1) both',
+              }}
+            >
+              <Icon size={18} className={`shrink-0 ${ok ? 'text-emerald-400' : 'text-red-400'}`} />
+              <span className="min-w-0 flex-1">{t.message}</span>
+              {/* Runs down for exactly as long as the toast stays - a glance
+                  says whether there's still time to read it. */}
+              <span
+                aria-hidden="true"
+                className={`absolute inset-x-0 bottom-0 h-0.5 origin-left ${ok ? 'bg-emerald-500/70' : 'bg-red-500/70'}`}
+                style={{ animation: `fl-toast-timer ${LIFETIME_MS}ms linear both` }}
+              />
+            </div>
+          )
+        })}
       </div>
     </ToastContext.Provider>
   )

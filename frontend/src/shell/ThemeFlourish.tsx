@@ -186,12 +186,27 @@ const FLOURISH_SLUGS = new Set(['the-matrix', 'amber-crt', 'vaporwave-1984', 'sy
 // react to the same reduced-motion/disabled switches, e.g. to lighten its
 // own background so the effect has something to show through instead of
 // going translucent over a plain solid colour for a theme with no flourish.
+// The Animations setting's Off (shell/motion.ts) stops this too - read
+// straight from storage rather than imported, since motion.ts already
+// imports from this file.
+function motionSetToOff(): boolean {
+  try {
+    return localStorage.getItem('mes_motion_level') === 'off'
+  } catch {
+    return false
+  }
+}
+
 export function useFlourishVisible(slug: string): boolean {
-  const [disabled, setDisabled] = useState(flourishesDisabled)
+  const [disabled, setDisabled] = useState(() => flourishesDisabled() || motionSetToOff())
   useEffect(() => {
-    const onChange = () => setDisabled(flourishesDisabled())
+    const onChange = () => setDisabled(flourishesDisabled() || motionSetToOff())
     window.addEventListener(FLOURISH_EVENT, onChange)
-    return () => window.removeEventListener(FLOURISH_EVENT, onChange)
+    window.addEventListener('mes-motion-level-changed', onChange)
+    return () => {
+      window.removeEventListener(FLOURISH_EVENT, onChange)
+      window.removeEventListener('mes-motion-level-changed', onChange)
+    }
   }, [])
   return !disabled && !prefersReducedMotion() && FLOURISH_SLUGS.has(slug)
 }

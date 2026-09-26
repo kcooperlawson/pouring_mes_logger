@@ -101,7 +101,16 @@ export function OperatorFormPage() {
     { key: 'audit', label: 'Audit', icon: Camera },
     { key: 'summary', label: 'Summary', icon: BarChart3 },
   ]
-  const [tab, setTab] = useState<TabKey>(tabs[0].key)
+  const [tab, setTabState] = useState<TabKey>(tabs[0].key)
+  // Which way the last switch went, so the new tab slides in from the side
+  // you moved towards - Summary arrives from the right, Pouring from the left.
+  const [tabDir, setTabDir] = useState<1 | -1>(1)
+  const tabIndex = Math.max(0, tabs.findIndex((t) => t.key === tab))
+  const setTab = (next: TabKey) => {
+    const to = tabs.findIndex((t) => t.key === next)
+    if (to !== tabIndex) setTabDir(to > tabIndex ? 1 : -1)
+    setTabState(next)
+  }
   const [myStation, setMyStation] = useState('')
   const [showAccount, setShowAccount] = useState(false)
   const [debugAsOperator, setDebugAsOperator] = useState('')
@@ -236,7 +245,7 @@ export function OperatorFormPage() {
                 <button key={t.key} data-tour={`tab-${t.key}`} onClick={() => setTab(t.key)} className={`flex items-center gap-1.5 ${tab === t.key ? fl.tabActive : fl.tabInactive}`}>
                   <t.icon size={14} className="shrink-0" strokeWidth={2.25} /> {t.label}
                   {t.key === 'audit' && showMyChecks && myOutstanding.length > 0 && (
-                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
+                    <span className="fl-attention flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
                       {myOutstanding.length}
                     </span>
                   )}
@@ -251,6 +260,13 @@ export function OperatorFormPage() {
               className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[var(--fl-border)] bg-[var(--fl-surface)]/95 backdrop-blur sm:hidden"
               style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
             >
+              {/* One indicator that glides to the active tab, rather than
+                  one per tab blinking on and off. */}
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute top-0 h-0.5 rounded-full bg-[var(--fl-accent)] transition-transform duration-300 ease-[cubic-bezier(0.22,0.61,0.36,1)]"
+                style={{ left: '1.25rem', width: 'calc(25% - 2.5rem)', transform: `translateX(calc(${tabIndex} * (100vw / 4)))` }}
+              />
               {tabs.map((t) => {
                 const active = tab === t.key
                 return (
@@ -262,11 +278,10 @@ export function OperatorFormPage() {
                       active ? 'text-[var(--fl-accent-2)]' : 'text-[var(--fl-muted)]'
                     }`}
                   >
-                    {active && <span className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-[var(--fl-accent)]" />}
-                    <span className="relative">
+                    <span className={`relative transition-transform duration-200 ${active ? '-translate-y-0.5 scale-110' : ''}`}>
                       <t.icon size={20} strokeWidth={active ? 2.5 : 2} />
                       {t.key === 'audit' && showMyChecks && myOutstanding.length > 0 && (
-                        <span className="absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
+                        <span className="fl-attention absolute -right-2.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6rem] font-extrabold text-black">
                           {myOutstanding.length}
                         </span>
                       )}
@@ -279,7 +294,7 @@ export function OperatorFormPage() {
 
             {/* key={tab} forces a fresh mount per tab so fl-tab-enter's
                 animation replays on every switch, not just the first. */}
-            <div key={tab} className="fl-tab-enter">
+            <div key={tab} className={tabDir > 0 ? 'fl-tab-enter' : 'fl-tab-enter-back'}>
               {tab === 'pouring' && <PouringTab shift={user?.shift ?? 'Shift 1'} myStation={myStation} />}
               {tab === 'packing' && <PackingTab />}
               {tab === 'downtime' && <DowntimeTab myStation={myStation} />}

@@ -3,6 +3,7 @@ import { Sparkles } from 'lucide-react'
 import { analyticsApi, type DowntimeReason, type HeatmapCell, type OperatorAccuracy, type ResinOutput, type TrendPoint, type WeightReading } from '../api/analytics'
 import { fl } from '../theme'
 import { Drill } from '../drill/DrillContext'
+import { stagger } from '../shell/motion'
 
 const card = fl.card
 const tile = fl.tile
@@ -46,8 +47,8 @@ function VelocityArea({ points }: { points: TrendPoint[] }) {
   return (
     <div>
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full" style={{ height: 200 }}>
-        <path d={areaPath} fill="rgba(0,210,255,0.12)" stroke="none" />
-        <path d={linePath} fill="none" stroke="#00D2FF" strokeWidth={3} />
+        <path d={areaPath} fill="rgba(0,210,255,0.12)" stroke="none" style={{ animation: 'fl-rain-fade 700ms 350ms ease-out both' }} />
+        <path d={linePath} pathLength={1} className="fl-line-draw" fill="none" stroke="#00D2FF" strokeWidth={3} />
         {coords.map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r={4} fill="#fff" stroke="#00D2FF" strokeWidth={2} />
         ))}
@@ -187,7 +188,10 @@ function WeightScatter({ readings }: { readings: WeightReading[] }) {
               transform={`rotate(45 ${x} ${y})`}
             />
           ) : (
-            <circle key={i} cx={x} cy={y} r={5} fill={colorFor(r.pump_station)} opacity={0.75} />
+            <circle
+              key={i} cx={x} cy={y} r={5} fill={colorFor(r.pump_station)} fillOpacity={0.75}
+              style={{ animation: `fl-rain-fade 300ms ${stagger(i, 25, 600)}ms ease-out both` }}
+            />
           )
         })}
       </svg>

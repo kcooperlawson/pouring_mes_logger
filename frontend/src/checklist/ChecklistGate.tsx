@@ -4,6 +4,7 @@ import { checklistApi } from '../api/checklist'
 import { referenceApi } from '../api/reference'
 import { useToast } from '../toast/ToastProvider'
 import { ScreenSweep } from '../tv/PrintBuild'
+import { celebrate } from '../shell/Celebrate'
 import { motionOff } from '../shell/motion'
 import { Step } from '../pouring/StepCard'
 import { Camera, ClipboardCheck, Lock, MapPin, Unlock as UnlockIcon } from 'lucide-react'
@@ -35,6 +36,7 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
 
   useEffect(() => {
     if (!showUnlock) return
+    celebrate({ strength: 0.8 })
     const t = setTimeout(() => setShowUnlock(false), 2500)
     return () => clearTimeout(t)
   }, [showUnlock])
@@ -149,10 +151,11 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
     return (
       <>
         {showUnlock && <ScreenSweep />}
+        {showUnlock && !motionOff() && <UnlockedBadge />}
         {/* Plays once, only for the terminal that just unlocked - a
             returning terminal whose checklist was already done stays a
             plain mount, so nobody sees a fade-in replay on every reload. */}
-        <div style={showUnlock ? { animation: 'fl-fade-up 420ms cubic-bezier(0.22,0.61,0.36,1) both' } : undefined}>
+        <div className={showUnlock ? 'fl-reveal' : undefined} style={showUnlock ? { animationDelay: '350ms' } : undefined}>
           <div className="mb-2 flex justify-end">
             <button className={`${fl.btnSecondary} flex items-center gap-1.5`} onClick={() => { setShowUnlock(false); setReopened(true) }}>
               <ClipboardCheck size={14} /> Startup checklist
@@ -330,6 +333,28 @@ export function ChecklistGate({ role, shift, station, onStationChange, children 
 // The header over the checklist. It used to be a red "TERMINAL LOCKED" block,
 // which read as an error on the first screen of every shift - this is the
 // same requirement stated as what it is: a few steps before starting.
+// The moment the terminal unlocks: a padlock springing open in the middle of
+// the screen, then gone - long enough to register "that worked", short
+// enough that nobody waits on it (it never blocks a tap; pointer-events off).
+function UnlockedBadge() {
+  return (
+    <div className="pointer-events-none fixed inset-0 z-[65] flex items-center justify-center" aria-hidden="true">
+      <div
+        className="flex flex-col items-center gap-2 rounded-2xl border border-emerald-600/60 bg-[var(--fl-surface)]/95 px-8 py-6 shadow-2xl"
+        style={{ animation: 'fl-milestone 1700ms cubic-bezier(0.22,0.61,0.36,1) both' }}
+      >
+        <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500 text-white">
+          <span className="inline-block" style={{ animation: 'fl-unlock 700ms 200ms cubic-bezier(0.22,0.61,0.36,1) both' }}>
+            <UnlockIcon size={32} strokeWidth={2.5} />
+          </span>
+        </span>
+        <span className="text-lg font-extrabold text-[var(--fl-ink)]">You're all set</span>
+        <span className="text-sm text-[var(--fl-muted)]">Have a good shift</span>
+      </div>
+    </div>
+  )
+}
+
 function Intro({ shift, station, steps = 3 }: { shift: string; station?: string; steps?: number }) {
   return (
     <div className="rounded-lg border border-[var(--fl-accent)]/40 bg-[var(--fl-accent-wash)] p-3">

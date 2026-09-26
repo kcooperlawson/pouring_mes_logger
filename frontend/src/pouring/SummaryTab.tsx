@@ -3,7 +3,7 @@ import { Award, BarChart3, Clock, Droplets, FlaskConical, Layers, RefreshCw } fr
 import { summaryApi } from '../api/summary'
 import { useDebugOperator } from '../operatorForm/DebugOperatorContext'
 import { Band } from '../shell/Band'
-import { stagger } from '../shell/motion'
+import { stagger, useCountUp } from '../shell/motion'
 import { fl } from '../theme'
 import { BadgeWall } from './BadgeWall'
 import { Drill } from '../drill/DrillContext'
@@ -22,7 +22,10 @@ function ShareBars({ rows, color }: { rows: { key: string; units: number; litres
           <div className="flex items-center gap-2 text-xs" style={{ animation: `fl-fade-up 320ms ${stagger(i, 40, 200)}ms both` }}>
             <span className="w-28 shrink-0 truncate text-[var(--fl-body)]">{r.key}</span>
             <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-black/30">
-              <div className={`h-full rounded-full ${color}`} style={{ width: `${(r.units / total) * 100}%` }} />
+              <div
+                className={`h-full origin-left rounded-full ${color}`}
+                style={{ width: `${(r.units / total) * 100}%`, animation: `fl-bar-grow 620ms ${stagger(i, 60, 300) + 150}ms cubic-bezier(0.22,0.61,0.36,1) both` }}
+              />
             </div>
             <span className="w-12 shrink-0 text-right font-semibold tabular-nums text-[var(--fl-ink)]">{r.units.toLocaleString()}</span>
             <span className={`w-14 shrink-0 text-right tabular-nums ${fl.muted}`}>{r.litres.toLocaleString(undefined, { maximumFractionDigits: 1 })} L</span>
@@ -52,6 +55,12 @@ export function SummaryTab() {
   const hours = data?.hourly_timeline ?? []
   const maxHour = Math.max(...hours.map((h) => h.units), 1)
   const best = hours.reduce<typeof hours[number] | null>((b, h) => (!b || h.units > b.units ? h : b), null)
+  // Opening the tab on your day is the one place a count-up from zero reads
+  // as "here's what you did" rather than as the screen lagging behind.
+  const shownUnits = useCountUp(data?.units ?? 0, 900, true)
+  const shownYieldTenths = useCountUp(Math.round((data?.yield_pct ?? 0) * 10), 900, true)
+  const shownBest = useCountUp(best?.units ?? 0, 900, true)
+  const rise = (i: number) => ({ animationDelay: `${120 + i * 70}ms` })
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,7 +89,7 @@ export function SummaryTab() {
           <Drill f={{ date_from: today, date_to: today }} block className="rounded-lg" title="Every log behind today's numbers">
             <div className={`${fl.card} text-center`} style={{ animation: 'fl-fade-up 360ms both' }}>
               <p className={fl.label}>Units today</p>
-              <p className="text-5xl font-black tabular-nums text-[var(--fl-accent-2)]">{data.units.toLocaleString()}</p>
+              <p className="text-5xl font-black tabular-nums text-[var(--fl-accent-2)]">{shownUnits.toLocaleString()}</p>
               <p className={`mt-1 text-sm ${fl.muted}`}>
                 {data.litres.toLocaleString(undefined, { maximumFractionDigits: 1 })} L · {data.logs_submitted} log{data.logs_submitted === 1 ? '' : 's'}
               </p>
@@ -88,23 +97,23 @@ export function SummaryTab() {
           </Drill>
 
           <div className="grid grid-cols-3 gap-2">
-            <div className={fl.tile}>
+            <div className={`${fl.tile} fl-rise`} style={rise(0)}>
               <Award size={15} className="mx-auto mb-1 text-[var(--fl-accent-2)]" />
               <p className={`text-lg font-extrabold tabular-nums ${data.yield_pct >= 98 ? 'text-emerald-400' : 'text-[var(--fl-ink)]'}`}>
-                {data.yield_pct.toFixed(1)}%
+                {(shownYieldTenths / 10).toFixed(1)}%
               </p>
               <p className={`text-xs ${fl.muted}`}>Yield</p>
             </div>
-            <div className={fl.tile}>
+            <div className={`${fl.tile} fl-rise`} style={rise(1)}>
               <Droplets size={15} className="mx-auto mb-1 text-[var(--fl-accent-2)]" />
               <p className={`text-lg font-extrabold tabular-nums ${data.scrap > 0 ? 'text-amber-400' : 'text-[var(--fl-ink)]'}`}>
                 {data.scrap.toLocaleString()}
               </p>
               <p className={`text-xs ${fl.muted}`}>Scrap</p>
             </div>
-            <div className={fl.tile}>
+            <div className={`${fl.tile} fl-rise`} style={rise(2)}>
               <Clock size={15} className="mx-auto mb-1 text-[var(--fl-accent-2)]" />
-              <p className="text-lg font-extrabold tabular-nums text-[var(--fl-ink)]">{best ? best.units.toLocaleString() : '—'}</p>
+              <p className="text-lg font-extrabold tabular-nums text-[var(--fl-ink)]">{best ? shownBest.toLocaleString() : '—'}</p>
               <p className={`text-xs ${fl.muted}`}>Best hour</p>
             </div>
           </div>
@@ -124,13 +133,16 @@ export function SummaryTab() {
                       <div key={h.hour} className="flex min-w-0 flex-1 flex-col items-center gap-1" title={`${h.units} units`}>
                         <span className={`text-[0.6rem] tabular-nums ${isBest ? 'font-bold text-[var(--fl-accent-2)]' : fl.muted}`}>{h.units}</span>
                         <div
-                          className={`w-full rounded-t ${isBest ? 'bg-[var(--fl-accent)]' : 'bg-[var(--fl-accent)]/45'}`}
+                          className={`relative w-full overflow-hidden rounded-t ${isBest ? 'bg-[var(--fl-accent)] shadow-[0_0_12px_var(--fl-accent)]' : 'bg-[var(--fl-accent)]/45'}`}
                           style={{
                             height: `${Math.max(4, (h.units / maxHour) * 88)}px`,
                             animation: `fl-grow-up 480ms ${stagger(i, 50, 400)}ms cubic-bezier(0.22,0.61,0.36,1) both`,
                             transformOrigin: 'bottom',
                           }}
-                        />
+                        >
+                          {/* The best hour catches the light now and then. */}
+                          {isBest && <span aria-hidden="true" className="fl-shimmer absolute inset-0" />}
+                        </div>
                         <span className={`text-[0.6rem] ${fl.muted}`}>
                           {new Date(h.hour).toLocaleTimeString([], { hour: 'numeric' })}
                         </span>

@@ -19,8 +19,19 @@ import './index.css'
 // Chrome could ever fire the (once-only) event - see pwa/installPrompt.ts.
 import './pwa/installPrompt.ts'
 import { primeAudio } from './sound/chimes.ts'
+import { applyMotionLevel } from './shell/motion.ts'
 
 registerSW({ immediate: true })
+
+// <html data-motion> before first paint, so the CSS that follows the
+// Animations setting never flashes the wrong level; and again whenever the
+// OS reduced-motion setting flips while the app is open.
+applyMotionLevel()
+try {
+  window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', applyMotionLevel)
+} catch {
+  /* older browsers: the level still applies on the next load */
+}
 
 // Unlocks the shared AudioContext on the very first real interaction
 // anywhere in the app - Safari refuses to start audio at all unless that

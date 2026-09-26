@@ -9,7 +9,8 @@ import { adminApi } from '../api/admin'
 import { checklistApi } from '../api/checklist'
 import { drillApi } from '../api/drill'
 import { Drill } from '../drill/DrillContext'
-import { stagger } from './motion'
+import { stagger, useCountUp } from './motion'
+import { useFlashOnChange } from '../hooks/useFlashOnChange'
 import { fl } from '../theme'
 import type { TabKey } from '../ManagerShell'
 
@@ -154,6 +155,27 @@ function DailyRounds({ onNavigate, canSee, canAdminister }: {
   )
 }
 
+// A today-figure that counts up from zero as the Cockpit opens, then rolls
+// to each new value on the minute refresh with a brief ring, so a number
+// that just moved is seen moving rather than found different later.
+function CountTo({ value, suffix = '' }: { value: number; suffix?: string }) {
+  const shown = useCountUp(value, 800, true)
+  return <>{shown.toLocaleString()}{suffix}</>
+}
+
+function TodayTile({ tile, index }: { tile: { label: string; value: ReactNode; flash?: number; sub: string; tone?: string }; index: number }) {
+  const flashing = useFlashOnChange(tile.flash)
+  return (
+    <div className="h-full" style={{ animation: `fl-fade-up 380ms ${stagger(index, 60, 240)}ms cubic-bezier(0.22,0.61,0.36,1) both` }}>
+      <div className={`${fl.card} h-full ${flashing ? 'fl-flash' : ''}`}>
+        <p className={fl.label}>{tile.label}</p>
+        <p className={`text-2xl font-extrabold tabular-nums ${tile.tone ?? 'text-[var(--fl-accent-2)]'}`}>{tile.value}</p>
+        <p className={`text-xs leading-snug ${fl.muted}`}>{tile.sub}</p>
+      </div>
+    </div>
+  )
+}
+
 function TodayStrip({ onNavigate, canSeeChecks }: { onNavigate: (tab: TabKey) => void; canSeeChecks: boolean }) {
   const today = todayIso()
   const drill = useQuery({
@@ -173,14 +195,14 @@ function TodayStrip({ onNavigate, canSeeChecks }: { onNavigate: (tab: TabKey) =>
   const people = s?.breakdown.operator.length ?? 0
   const filter = { date_from: today, date_to: today }
 
-  const tiles: { label: string; value: string; sub: string; tone?: string; f?: typeof filter; go?: TabKey }[] = [
-    { label: 'Poured today', value: s ? s.units.toLocaleString() : '—',
+  const tiles: { label: string; value: ReactNode; flash?: number; sub: string; tone?: string; f?: typeof filter; go?: TabKey }[] = [
+    { label: 'Poured today', value: s ? <CountTo value={s.units} /> : '—', flash: s?.units,
       sub: s ? `${s.litres.toLocaleString()} L · ${s.logs} log${s.logs === 1 ? '' : 's'}` : 'nothing logged yet', f: filter },
-    { label: 'Pumps running', value: pumps ? String(pumps) : '—',
+    { label: 'Pumps running', value: pumps ? <CountTo value={pumps} /> : '—', flash: pumps,
       sub: people ? `${people} operator${people === 1 ? '' : 's'} on the floor` : 'no pours logged yet', f: filter },
-    { label: 'Downtime', value: s ? `${drill.data?.downtime_min ?? 0}m` : '—',
+    { label: 'Downtime', value: s ? <CountTo value={drill.data?.downtime_min ?? 0} suffix="m" /> : '—', flash: drill.data?.downtime_min,
       sub: `${drill.data?.downtime.length ?? 0} stop${(drill.data?.downtime.length ?? 0) === 1 ? '' : 's'} today`, f: filter },
-    { label: 'Checks outstanding', value: checks.data ? String(outstanding) : '—',
+    { label: 'Checks outstanding', value: checks.data ? <CountTo value={outstanding} /> : '—', flash: checks.data ? outstanding : undefined,
       sub: outstanding ? 'checklists or photos missing' : 'everything on record',
       tone: outstanding ? 'text-amber-400' : 'text-emerald-400',
       go: canSeeChecks ? 'checks' : undefined },
@@ -189,16 +211,7 @@ function TodayStrip({ onNavigate, canSeeChecks }: { onNavigate: (tab: TabKey) =>
   return (
     <div data-tour="today-strip" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {tiles.map((tile, i) => {
-        const body = (
-          <div
-            className={`${fl.card} h-full`}
-            style={{ animation: `fl-fade-up 380ms ${stagger(i, 60, 240)}ms cubic-bezier(0.22,0.61,0.36,1) both` }}
-          >
-            <p className={fl.label}>{tile.label}</p>
-            <p className={`text-2xl font-extrabold tabular-nums ${tile.tone ?? 'text-[var(--fl-accent-2)]'}`}>{tile.value}</p>
-            <p className={`text-xs leading-snug ${fl.muted}`}>{tile.sub}</p>
-          </div>
-        )
+        const body = <TodayTile tile={tile} index={i} />
         if (tile.f) return <Drill key={tile.label} f={tile.f} block className="rounded-lg">{body}</Drill>
         if (tile.go) {
           return (

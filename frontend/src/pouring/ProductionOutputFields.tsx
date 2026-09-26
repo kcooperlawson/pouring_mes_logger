@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { ChevronDown, Minus, Plus } from 'lucide-react'
-import { type ReactNode, useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { pouringApi } from '../api/pouring'
 import { describe, judge } from './fillWeight'
@@ -96,7 +96,18 @@ export function ProductionOutputFields({
     scrapEmpty + scrapFilled > 0 ? `${scrapEmpty + scrapFilled} scrap` : 'no scrap',
     checkWeightG != null ? `${checkWeightG} g weighed` : 'not weighed',
   ].join(' · ')
-  const step = (d: number) => onBottlesFilledChange(Math.max(0, (bottlesFilled || 0) + d))
+  // The big number gives a little bump each time a stepper button changes
+  // it, so a tap on -10/+10 is seen to land even without reading the digits.
+  const countRef = useRef<HTMLInputElement>(null)
+  const step = (d: number) => {
+    onBottlesFilledChange(Math.max(0, (bottlesFilled || 0) + d))
+    if (!motionOff()) {
+      countRef.current?.animate(
+        [{ transform: 'scale(1)' }, { transform: `scale(1.08) translateY(${d > 0 ? -2 : 2}px)` }, { transform: 'scale(1)' }],
+        { duration: 220, easing: 'cubic-bezier(0.22,0.61,0.36,1)' },
+      )
+    }
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -179,6 +190,7 @@ export function ProductionOutputFields({
             </button>
             <input
               className={`${fl.input} min-w-0 flex-1 py-3 text-center text-3xl font-extrabold tabular-nums text-[var(--fl-ink)]`}
+              ref={countRef}
               data-fl-count-field
               type="number"
               inputMode="numeric"
@@ -208,7 +220,10 @@ export function ProductionOutputFields({
             <ChevronDown size={15} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
           </span>
         </button>
-        {open && (
+        {/* Always mounted so it can glide open and shut (fl-fold); inert
+            while shut so its fields can't be tabbed into unseen. */}
+        <div className="fl-fold" data-open={open} inert={!open}>
+        <div>
         <div className="flex flex-col gap-3 border-t border-[var(--fl-border)] p-3">
       <div className="grid grid-cols-2 gap-2">
         <div>
@@ -289,7 +304,8 @@ export function ProductionOutputFields({
       </div>
       {extra}
         </div>
-        )}
+        </div>
+        </div>
       </div>
     </div>
   )

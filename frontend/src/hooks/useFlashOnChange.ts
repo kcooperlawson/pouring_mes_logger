@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { motionOff } from '../shell/motion'
 
 // True for a brief moment whenever `value` changes from what it was last
 // render - the visible half of the real-time push (useRealtimeInvalidate
@@ -20,7 +21,7 @@ export function useFlashOnChange(value: unknown, durationMs = 900): boolean {
     }
     if (value === prev.current) return
     prev.current = value
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (motionOff()) return
     setFlashing(true)
     const t = setTimeout(() => setFlashing(false), durationMs)
     return () => clearTimeout(t)
